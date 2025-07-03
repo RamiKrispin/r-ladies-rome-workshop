@@ -167,7 +167,7 @@ plot_decomposition <- function(obj, var, outliers = FALSE) {
 #'
 #' @return A plotly object
 
-plot_acf <- function(ts, var, lag_max, frequency) {
+plot_acf <- function(ts, var, lag_max, frequency, alpha = 0.05) {
     a <- ts |> feasts::ACF(!!rlang::sym(var), lag_max = lag_max)
     color <- "#0072B5"
     pi_upper <- qnorm(1 - alpha / 2) / sqrt(nrow(ts))

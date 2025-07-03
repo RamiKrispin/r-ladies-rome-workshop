@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 <meta name="author" content="Rami Krispin">
-<meta name="dcterms.date" content="2025-07-02">
+<meta name="dcterms.date" content="2025-07-03">
 
 <title>Forecasting with Linear Regression</title>
 <style>
@@ -81,6 +81,35 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <link href="05_forecasting_with_lm_files/libs/plotly-htmlwidgets-css-2.11.1/plotly-htmlwidgets.css" rel="stylesheet">
 <script src="05_forecasting_with_lm_files/libs/plotly-main-2.11.1/plotly-latest.min.js"></script>
 
+  <script src="https://cdnjs.cloudflare.com/polyfill/v3/polyfill.min.js?features=es6"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js" type="text/javascript"></script>
+
+<script type="text/javascript">
+const typesetMath = (el) => {
+  if (window.MathJax) {
+    // MathJax Typeset
+    window.MathJax.typeset([el]);
+  } else if (window.katex) {
+    // KaTeX Render
+    var mathElements = el.getElementsByClassName("math");
+    var macros = [];
+    for (var i = 0; i < mathElements.length; i++) {
+      var texText = mathElements[i].firstChild;
+      if (mathElements[i].tagName == "SPAN") {
+        window.katex.render(texText.data, mathElements[i], {
+          displayMode: mathElements[i].classList.contains('display'),
+          throwOnError: false,
+          macros: macros,
+          fleqn: false
+        });
+      }
+    }
+  }
+}
+window.Quarto = {
+  typesetMath
+};
+</script>
 
 </head>
 
@@ -94,7 +123,14 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   <ul>
   <li><a href="#required-libraries" id="toc-required-libraries" class="nav-link active" data-scroll-target="#required-libraries">Required Libraries</a></li>
   <li><a href="#load-data" id="toc-load-data" class="nav-link" data-scroll-target="#load-data">Load Data</a></li>
-  <li><a href="#modeling-trend" id="toc-modeling-trend" class="nav-link" data-scroll-target="#modeling-trend">Modeling Trend</a></li>
+  <li><a href="#modeling-trend" id="toc-modeling-trend" class="nav-link" data-scroll-target="#modeling-trend">Modeling Trend</a>
+  <ul class="collapse">
+  <li><a href="#fitting-a-linear-trend" id="toc-fitting-a-linear-trend" class="nav-link" data-scroll-target="#fitting-a-linear-trend">Fitting a Linear Trend</a></li>
+  <li><a href="#residuals-analysis" id="toc-residuals-analysis" class="nav-link" data-scroll-target="#residuals-analysis">Residuals Analysis</a></li>
+  <li><a href="#forecast-the-trend" id="toc-forecast-the-trend" class="nav-link" data-scroll-target="#forecast-the-trend">Forecast the Trend</a></li>
+  <li><a href="#improving-the-model" id="toc-improving-the-model" class="nav-link" data-scroll-target="#improving-the-model">Improving the model</a></li>
+  <li><a href="#ar-model" id="toc-ar-model" class="nav-link" data-scroll-target="#ar-model">AR model</a></li>
+  </ul></li>
   </ul>
 </nav>
 </div>
@@ -119,7 +155,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     <div>
     <div class="quarto-title-meta-heading">Published</div>
     <div class="quarto-title-meta-contents">
-      <p class="date">July 2, 2025</p>
+      <p class="date">July 3, 2025</p>
     </div>
   </div>
   
@@ -156,55 +192,356 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <div class="cell">
 <div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="fu">head</span>(ts1)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>  period duoarea  area-name product product-name process
-1   1986     SCA CALIFORNIA    EPG0  Natural Gas     VN3
-2   1987     SCA CALIFORNIA    EPG0  Natural Gas     VN3
-3   1988     SCA CALIFORNIA    EPG0  Natural Gas     VN3
-4   1989     SCA CALIFORNIA    EPG0  Natural Gas     VN3
-5   1990     SCA CALIFORNIA    EPG0  Natural Gas     VN3
-6   1991     SCA CALIFORNIA    EPG0  Natural Gas     VN3
-                     process-name       series
-1 Number of Residential Consumers NA1501_SCA_8
-2 Number of Residential Consumers NA1501_SCA_8
-3 Number of Residential Consumers NA1501_SCA_8
-4 Number of Residential Consumers NA1501_SCA_8
-5 Number of Residential Consumers NA1501_SCA_8
-6 Number of Residential Consumers NA1501_SCA_8
-                                              series-description   value units
-1 California Natural Gas Number of Residential Consumers (Count)    7626 COUNT
-2 California Natural Gas Number of Residential Consumers (Count) 7904858 COUNT
-3 California Natural Gas Number of Residential Consumers (Count) 8113034 COUNT
-4 California Natural Gas Number of Residential Consumers (Count) 8313776 COUNT
-5 California Natural Gas Number of Residential Consumers (Count) 8497848 COUNT
-6 California Natural Gas Number of Residential Consumers (Count) 8634774 COUNT</code></pre>
+<pre><code># A tsibble: 6 x 3 [1Y]
+  index       y series_id
+  &lt;int&gt;   &lt;int&gt; &lt;chr&gt;    
+1  1986    7626 SCA      
+2  1987 7904858 SCA      
+3  1988 8113034 SCA      
+4  1989 8313776 SCA      
+5  1990 8497848 SCA      
+6  1991 8634774 SCA      </code></pre>
 </div>
-<div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>ts <span class="ot">&lt;-</span> ts1 <span class="sc">|&gt;</span></span>
-<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>dplyr<span class="sc">::</span><span class="fu">select</span>(period, <span class="at">y =</span> value) <span class="sc">|&gt;</span></span>
-<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>dplyr<span class="sc">::</span><span class="fu">filter</span>(period <span class="sc">&gt;</span> <span class="dv">1986</span>) <span class="sc">|&gt;</span></span>
-<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a><span class="fu">as_tsibble</span>(<span class="at">index =</span> period)  </span>
-<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a><span class="fu">plot_ly</span>(<span class="at">data =</span> ts, <span class="at">x =</span> <span class="sc">~</span>period, <span class="at">y =</span> <span class="sc">~</span>y, <span class="at">type =</span> <span class="st">"scatter"</span>, <span class="at">mode =</span> <span class="st">"lines"</span>) </span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>ts1 <span class="ot">&lt;-</span> ts1 <span class="sc">|&gt;</span> </span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>dplyr<span class="sc">::</span><span class="fu">filter</span>(index <span class="sc">&gt;</span> <span class="dv">1986</span>)</span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>p <span class="ot">&lt;-</span> <span class="fu">plot_ly</span>() <span class="sc">|&gt;</span></span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a><span class="fu">add_lines</span>(<span class="at">x =</span> ts1<span class="sc">$</span>index, <span class="at">y =</span> ts1<span class="sc">$</span>y, <span class="at">type =</span> <span class="st">"scatter"</span>, <span class="at">mode =</span> <span class="st">"lines"</span>, <span class="at">name =</span> <span class="st">"Actual"</span>) </span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>p</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
-<div class="plotly html-widget html-fill-item" id="htmlwidget-71b711e265dfb0e26571" style="width:100%;height:464px;"></div>
-<script type="application/json" data-for="htmlwidget-71b711e265dfb0e26571">{"x":{"visdat":{"11890553af8fa":["function () ","plotlyVisDat"]},"cur_data":"11890553af8fa","attrs":{"11890553af8fa":{"x":{},"y":{},"mode":"lines","alpha_stroke":1,"sizes":[10,100],"spans":[1,20],"type":"scatter"}},"layout":{"margin":{"b":40,"l":60,"t":25,"r":10},"xaxis":{"domain":[0,1],"automargin":true,"title":"period"},"yaxis":{"domain":[0,1],"automargin":true,"title":"y"},"hovermode":"closest","showlegend":false},"source":"A","config":{"modeBarButtonsToAdd":["hoverclosest","hovercompare"],"showSendToCloud":false},"data":[{"x":[1987,1988,1989,1990,1991,1992,1993,1994,1995,1996,1997,1998,1999,2000,2001,2002,2003,2004,2005,2006,2007,2008,2009,2010,2011,2012,2013,2014,2015,2016,2017,2018,2019,2020,2021,2022,2023],"y":[7904858,8113034,8313776,8497848,8634774,8680613,8726187,8790733,8865541,8969308,9060473,9181928,9331206,9370797,9603122,9726642,9803311,9957412,10124433,10329224,10439220,10515162,10510950,10542584,10625190,10681916,10754908,10781720,10969597,10916368,11004853,11025789,11112094,11186350,11232552,11280329,11355756],"mode":"lines","type":"scatter","marker":{"color":"rgba(31,119,180,1)","line":{"color":"rgba(31,119,180,1)"}},"error_y":{"color":"rgba(31,119,180,1)"},"error_x":{"color":"rgba(31,119,180,1)"},"line":{"color":"rgba(31,119,180,1)"},"xaxis":"x","yaxis":"y","frame":null}],"highlight":{"on":"plotly_click","persistent":false,"dynamic":false,"selectize":false,"opacityDim":0.20000000000000001,"selected":{"opacity":1},"debounce":0},"shinyEvents":["plotly_hover","plotly_click","plotly_selected","plotly_relayout","plotly_brushed","plotly_brushing","plotly_clickannotation","plotly_doubleclick","plotly_deselect","plotly_afterplot","plotly_sunburstclick"],"base_url":"https://plot.ly"},"evals":[],"jsHooks":[]}</script>
+<div class="plotly html-widget html-fill-item" id="htmlwidget-0b8d7d56b428f25b7f9f" style="width:100%;height:464px;"></div>
+<script type="application/json" data-for="htmlwidget-0b8d7d56b428f25b7f9f">{"x":{"visdat":{"9d956305913e":["function () ","plotlyVisDat"]},"cur_data":"9d956305913e","attrs":{"9d956305913e":{"alpha_stroke":1,"sizes":[10,100],"spans":[1,20],"x":[1987,1988,1989,1990,1991,1992,1993,1994,1995,1996,1997,1998,1999,2000,2001,2002,2003,2004,2005,2006,2007,2008,2009,2010,2011,2012,2013,2014,2015,2016,2017,2018,2019,2020,2021,2022,2023],"y":[7904858,8113034,8313776,8497848,8634774,8680613,8726187,8790733,8865541,8969308,9060473,9181928,9331206,9370797,9603122,9726642,9803311,9957412,10124433,10329224,10439220,10515162,10510950,10542584,10625190,10681916,10754908,10781720,10969597,10916368,11004853,11025789,11112094,11186350,11232552,11280329,11355756],"type":"scatter","mode":"lines","name":"Actual","inherit":true}},"layout":{"margin":{"b":40,"l":60,"t":25,"r":10},"xaxis":{"domain":[0,1],"automargin":true,"title":[]},"yaxis":{"domain":[0,1],"automargin":true,"title":[]},"hovermode":"closest","showlegend":false},"source":"A","config":{"modeBarButtonsToAdd":["hoverclosest","hovercompare"],"showSendToCloud":false},"data":[{"x":[1987,1988,1989,1990,1991,1992,1993,1994,1995,1996,1997,1998,1999,2000,2001,2002,2003,2004,2005,2006,2007,2008,2009,2010,2011,2012,2013,2014,2015,2016,2017,2018,2019,2020,2021,2022,2023],"y":[7904858,8113034,8313776,8497848,8634774,8680613,8726187,8790733,8865541,8969308,9060473,9181928,9331206,9370797,9603122,9726642,9803311,9957412,10124433,10329224,10439220,10515162,10510950,10542584,10625190,10681916,10754908,10781720,10969597,10916368,11004853,11025789,11112094,11186350,11232552,11280329,11355756],"type":"scatter","mode":"lines","name":"Actual","marker":{"color":"rgba(31,119,180,1)","line":{"color":"rgba(31,119,180,1)"}},"error_y":{"color":"rgba(31,119,180,1)"},"error_x":{"color":"rgba(31,119,180,1)"},"line":{"color":"rgba(31,119,180,1)"},"xaxis":"x","yaxis":"y","frame":null}],"highlight":{"on":"plotly_click","persistent":false,"dynamic":false,"selectize":false,"opacityDim":0.20000000000000001,"selected":{"opacity":1},"debounce":0},"shinyEvents":["plotly_hover","plotly_click","plotly_selected","plotly_relayout","plotly_brushed","plotly_brushing","plotly_clickannotation","plotly_doubleclick","plotly_deselect","plotly_afterplot","plotly_sunburstclick"],"base_url":"https://plot.ly"},"evals":[],"jsHooks":[]}</script>
 </div>
+</div>
+<section id="fitting-a-linear-trend" class="level3">
+<h3 class="anchored" data-anchor-id="fitting-a-linear-trend">Fitting a Linear Trend</h3>
+<p>To model the trend we will create an index variable and use linear regression model fit the index against the dependent variable - the series of interest:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>ts1 <span class="ot">&lt;-</span> ts1 <span class="sc">|&gt;</span> </span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>dplyr<span class="sc">::</span><span class="fu">mutate</span>(<span class="at">trend =</span> <span class="dv">1</span><span class="sc">:</span><span class="fu">nrow</span>(ts1))</span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a><span class="fu">head</span>(ts1)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tsibble: 6 x 4 [1Y]
+  index       y series_id trend
+  &lt;int&gt;   &lt;int&gt; &lt;chr&gt;     &lt;int&gt;
+1  1987 7904858 SCA           1
+2  1988 8113034 SCA           2
+3  1989 8313776 SCA           3
+4  1990 8497848 SCA           4
+5  1991 8634774 SCA           5
+6  1992 8680613 SCA           6</code></pre>
+</div>
+</div>
+<p>Let’s now set a regression model:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>md1 <span class="ot">&lt;-</span> <span class="fu">lm</span>(y <span class="sc">~</span> trend, <span class="at">data =</span> ts1)</span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(md1)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>
+Call:
+lm(formula = y ~ trend, data = ts1)
+
+Residuals:
+    Min      1Q  Median      3Q     Max 
+-298308  -94696  -14364   98742  332048 
+
+Coefficients:
+            Estimate Std. Error t value Pr(&gt;|t|)    
+(Intercept)  8107966      54683  148.27   &lt;2e-16 ***
+trend          95200       2509   37.94   &lt;2e-16 ***
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+
+Residual standard error: 163000 on 35 degrees of freedom
+Multiple R-squared:  0.9763,    Adjusted R-squared:  0.9756 
+F-statistic:  1440 on 1 and 35 DF,  p-value: &lt; 2.2e-16</code></pre>
+</div>
+</div>
+<p>We will fit the model on the series to see the trend fit:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb11"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>fit1 <span class="ot">&lt;-</span> <span class="fu">predict</span>(<span class="at">object =</span> md1, <span class="at">newdata =</span> ts1,  <span class="at">interval =</span> <span class="st">"confidence"</span>, <span class="at">level =</span> <span class="fl">0.95</span>)</span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>ts1<span class="sc">$</span>fit1 <span class="ot">&lt;-</span> fit1[, <span class="dv">1</span>]</span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>p1 <span class="ot">&lt;-</span> p <span class="sc">|&gt;</span> </span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a><span class="fu">add_lines</span>(<span class="at">x =</span> ts1<span class="sc">$</span>index, <span class="at">y =</span> ts1<span class="sc">$</span>fit1, <span class="at">mode =</span> <span class="st">"lines"</span>, <span class="at">line =</span> <span class="fu">list</span>(<span class="at">color =</span> <span class="st">"black"</span>, <span class="at">dash =</span> <span class="st">"dash"</span>), <span class="at">name =</span> <span class="st">"Fitted"</span>) </span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a>p1</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div class="plotly html-widget html-fill-item" id="htmlwidget-e2bcc15d616710062cbb" style="width:100%;height:464px;"></div>
+<script type="application/json" data-for="htmlwidget-e2bcc15d616710062cbb">{"x":{"visdat":{"9d956305913e":["function () ","plotlyVisDat"]},"cur_data":"9d956305913e","attrs":{"9d956305913e":{"alpha_stroke":1,"sizes":[10,100],"spans":[1,20],"x":[1987,1988,1989,1990,1991,1992,1993,1994,1995,1996,1997,1998,1999,2000,2001,2002,2003,2004,2005,2006,2007,2008,2009,2010,2011,2012,2013,2014,2015,2016,2017,2018,2019,2020,2021,2022,2023],"y":[7904858,8113034,8313776,8497848,8634774,8680613,8726187,8790733,8865541,8969308,9060473,9181928,9331206,9370797,9603122,9726642,9803311,9957412,10124433,10329224,10439220,10515162,10510950,10542584,10625190,10681916,10754908,10781720,10969597,10916368,11004853,11025789,11112094,11186350,11232552,11280329,11355756],"type":"scatter","mode":"lines","name":"Actual","inherit":true},"9d956305913e.1":{"alpha_stroke":1,"sizes":[10,100],"spans":[1,20],"x":[1987,1988,1989,1990,1991,1992,1993,1994,1995,1996,1997,1998,1999,2000,2001,2002,2003,2004,2005,2006,2007,2008,2009,2010,2011,2012,2013,2014,2015,2016,2017,2018,2019,2020,2021,2022,2023],"y":[8203166.3968705591,8298366.6991465194,8393567.0014224797,8488767.3036984392,8583967.6059743986,8679167.9082503598,8774368.2105263192,8869568.5128022805,8964768.8150782399,9059969.1173541993,9155169.4196301606,9250369.72190612,9345570.0241820812,9440770.3264580406,9535970.628734,9631170.9310099613,9726371.2332859207,9821571.535561882,9916771.8378378414,10011972.140113801,10107172.442389762,10202372.744665721,10297573.046941681,10392773.349217642,10487973.651493602,10583173.953769563,10678374.256045522,10773574.558321482,10868774.860597443,10963975.162873402,11059175.465149364,11154375.767425323,11249576.069701282,11344776.371977244,11439976.674253203,11535176.976529164,11630377.278805124],"type":"scatter","mode":"lines","line":{"color":"black","dash":"dash"},"name":"Fitted","inherit":true}},"layout":{"margin":{"b":40,"l":60,"t":25,"r":10},"xaxis":{"domain":[0,1],"automargin":true,"title":[]},"yaxis":{"domain":[0,1],"automargin":true,"title":[]},"hovermode":"closest","showlegend":true},"source":"A","config":{"modeBarButtonsToAdd":["hoverclosest","hovercompare"],"showSendToCloud":false},"data":[{"x":[1987,1988,1989,1990,1991,1992,1993,1994,1995,1996,1997,1998,1999,2000,2001,2002,2003,2004,2005,2006,2007,2008,2009,2010,2011,2012,2013,2014,2015,2016,2017,2018,2019,2020,2021,2022,2023],"y":[7904858,8113034,8313776,8497848,8634774,8680613,8726187,8790733,8865541,8969308,9060473,9181928,9331206,9370797,9603122,9726642,9803311,9957412,10124433,10329224,10439220,10515162,10510950,10542584,10625190,10681916,10754908,10781720,10969597,10916368,11004853,11025789,11112094,11186350,11232552,11280329,11355756],"type":"scatter","mode":"lines","name":"Actual","marker":{"color":"rgba(31,119,180,1)","line":{"color":"rgba(31,119,180,1)"}},"error_y":{"color":"rgba(31,119,180,1)"},"error_x":{"color":"rgba(31,119,180,1)"},"line":{"color":"rgba(31,119,180,1)"},"xaxis":"x","yaxis":"y","frame":null},{"x":[1987,1988,1989,1990,1991,1992,1993,1994,1995,1996,1997,1998,1999,2000,2001,2002,2003,2004,2005,2006,2007,2008,2009,2010,2011,2012,2013,2014,2015,2016,2017,2018,2019,2020,2021,2022,2023],"y":[8203166.3968705591,8298366.6991465194,8393567.0014224797,8488767.3036984392,8583967.6059743986,8679167.9082503598,8774368.2105263192,8869568.5128022805,8964768.8150782399,9059969.1173541993,9155169.4196301606,9250369.72190612,9345570.0241820812,9440770.3264580406,9535970.628734,9631170.9310099613,9726371.2332859207,9821571.535561882,9916771.8378378414,10011972.140113801,10107172.442389762,10202372.744665721,10297573.046941681,10392773.349217642,10487973.651493602,10583173.953769563,10678374.256045522,10773574.558321482,10868774.860597443,10963975.162873402,11059175.465149364,11154375.767425323,11249576.069701282,11344776.371977244,11439976.674253203,11535176.976529164,11630377.278805124],"type":"scatter","mode":"lines","line":{"color":"black","dash":"dash"},"name":"Fitted","marker":{"color":"rgba(255,127,14,1)","line":{"color":"rgba(255,127,14,1)"}},"error_y":{"color":"rgba(255,127,14,1)"},"error_x":{"color":"rgba(255,127,14,1)"},"xaxis":"x","yaxis":"y","frame":null}],"highlight":{"on":"plotly_click","persistent":false,"dynamic":false,"selectize":false,"opacityDim":0.20000000000000001,"selected":{"opacity":1},"debounce":0},"shinyEvents":["plotly_hover","plotly_click","plotly_selected","plotly_relayout","plotly_brushed","plotly_brushing","plotly_clickannotation","plotly_doubleclick","plotly_deselect","plotly_afterplot","plotly_sunburstclick"],"base_url":"https://plot.ly"},"evals":[],"jsHooks":[]}</script>
+</div>
+</div>
+</section>
+<section id="residuals-analysis" class="level3">
+<h3 class="anchored" data-anchor-id="residuals-analysis">Residuals Analysis</h3>
+<p>The goal of the residual analysis is to check the goodness of fit of the model with data the it was encountered during the fit process. The residual could indicate whether the model has a good fit or or some patterns left and a direction about the type of features that are needed for better predictions.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb12"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>ts1<span class="sc">$</span>res1 <span class="ot">&lt;-</span> ts1<span class="sc">$</span>y <span class="sc">-</span> ts1<span class="sc">$</span>fit1</span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a><span class="fu">plot_ly</span>(<span class="at">x =</span> ts1<span class="sc">$</span>index, <span class="at">y =</span> ts1<span class="sc">$</span>res1, <span class="at">type =</span> <span class="st">"scatter"</span>, <span class="at">mode =</span> <span class="st">"markers"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div class="plotly html-widget html-fill-item" id="htmlwidget-9729b7fbe1ebfd92cc57" style="width:100%;height:464px;"></div>
+<script type="application/json" data-for="htmlwidget-9729b7fbe1ebfd92cc57">{"x":{"visdat":{"9d952c3bc2b9":["function () ","plotlyVisDat"]},"cur_data":"9d952c3bc2b9","attrs":{"9d952c3bc2b9":{"x":[1987,1988,1989,1990,1991,1992,1993,1994,1995,1996,1997,1998,1999,2000,2001,2002,2003,2004,2005,2006,2007,2008,2009,2010,2011,2012,2013,2014,2015,2016,2017,2018,2019,2020,2021,2022,2023],"y":[-298308.39687055908,-185332.69914651942,-79791.001422479749,9080.696301560849,50806.394025601447,1445.0917496401817,-48181.210526319221,-78835.512802280486,-99227.815078239888,-90661.11735419929,-94696.419630160555,-68441.721906119958,-14364.024182081223,-69973.326458040625,67151.371265999973,95471.068990038708,76939.766714079306,135840.46443811804,207661.16216215864,317251.85988619924,332047.55761023797,312789.25533427857,213376.95305831917,149810.6507823579,137216.3485063985,98742.046230437234,76533.743954477832,8145.4416785184294,100822.13940255716,-47607.162873402238,-54322.465149363503,-128586.76742532291,-137482.06970128231,-158426.37197724357,-207424.67425320297,-254847.97652916424,-274621.27880512364],"mode":"markers","alpha_stroke":1,"sizes":[10,100],"spans":[1,20],"type":"scatter"}},"layout":{"margin":{"b":40,"l":60,"t":25,"r":10},"xaxis":{"domain":[0,1],"automargin":true,"title":[]},"yaxis":{"domain":[0,1],"automargin":true,"title":[]},"hovermode":"closest","showlegend":false},"source":"A","config":{"modeBarButtonsToAdd":["hoverclosest","hovercompare"],"showSendToCloud":false},"data":[{"x":[1987,1988,1989,1990,1991,1992,1993,1994,1995,1996,1997,1998,1999,2000,2001,2002,2003,2004,2005,2006,2007,2008,2009,2010,2011,2012,2013,2014,2015,2016,2017,2018,2019,2020,2021,2022,2023],"y":[-298308.39687055908,-185332.69914651942,-79791.001422479749,9080.696301560849,50806.394025601447,1445.0917496401817,-48181.210526319221,-78835.512802280486,-99227.815078239888,-90661.11735419929,-94696.419630160555,-68441.721906119958,-14364.024182081223,-69973.326458040625,67151.371265999973,95471.068990038708,76939.766714079306,135840.46443811804,207661.16216215864,317251.85988619924,332047.55761023797,312789.25533427857,213376.95305831917,149810.6507823579,137216.3485063985,98742.046230437234,76533.743954477832,8145.4416785184294,100822.13940255716,-47607.162873402238,-54322.465149363503,-128586.76742532291,-137482.06970128231,-158426.37197724357,-207424.67425320297,-254847.97652916424,-274621.27880512364],"mode":"markers","type":"scatter","marker":{"color":"rgba(31,119,180,1)","line":{"color":"rgba(31,119,180,1)"}},"error_y":{"color":"rgba(31,119,180,1)"},"error_x":{"color":"rgba(31,119,180,1)"},"line":{"color":"rgba(31,119,180,1)"},"xaxis":"x","yaxis":"y","frame":null}],"highlight":{"on":"plotly_click","persistent":false,"dynamic":false,"selectize":false,"opacityDim":0.20000000000000001,"selected":{"opacity":1},"debounce":0},"shinyEvents":["plotly_hover","plotly_click","plotly_selected","plotly_relayout","plotly_brushed","plotly_brushing","plotly_clickannotation","plotly_doubleclick","plotly_deselect","plotly_afterplot","plotly_sunburstclick"],"base_url":"https://plot.ly"},"evals":[],"jsHooks":[]}</script>
+</div>
+</div>
+<p>Clearly, you can see that some patterns are left in the residuals. We can check for autocorrelation:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="fu">plot_acf</span>(<span class="at">ts =</span> ts1, <span class="at">var =</span> <span class="st">"res1"</span>, <span class="at">lag_max =</span> <span class="dv">60</span>, <span class="at">frequency =</span> <span class="cn">NULL</span>, <span class="at">alpha =</span> <span class="fl">0.05</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div class="plotly html-widget html-fill-item" id="htmlwidget-16f7086c8dd1d74c1d78" style="width:100%;height:464px;"></div>
+<script type="application/json" data-for="htmlwidget-16f7086c8dd1d74c1d78">{"x":{"visdat":{"9d9518fccd5d":["function () ","plotlyVisDat"]},"cur_data":"9d9518fccd5d","attrs":{"9d9518fccd5d":{"alpha_stroke":1,"sizes":[10,100],"spans":[1,20],"type":"bar"},"9d9518fccd5d.1":{"alpha_stroke":1,"sizes":[10,100],"spans":[1,20],"type":"bar","x":[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36],"y":[0.83072101837902235,0.668951444284694,0.50472574927189506,0.38119031858414193,0.2777252903387738,0.1566187097918196,0.049669476453420999,-0.072711793525182367,-0.14919729552258246,-0.25790873943718418,-0.34191929693960632,-0.40779130578469813,-0.42790320168350177,-0.46684938715081803,-0.45431943852922579,-0.3854340005383704,-0.3499571035407435,-0.30616928797238074,-0.27953382812264715,-0.22378127471973841,-0.15287950307566639,-0.059602238568431797,0.0076729930983691387,0.023216772476227332,0.052311814885141361,0.057074729124776159,0.053401075874543957,0.034469747079706792,0.063334420041829875,0.055836035611621586,0.065906235479313069,0.076027567510557656,0.11141266830628477,0.1409781278344498,0.13656555904340564,0.088147941640782532],"name":"Lags","marker":{"color":"#0072B5","line":{"color":"rgb(8,48,107)","width":1.5}},"inherit":true},"9d9518fccd5d.2":{"alpha_stroke":1,"sizes":[10,100],"spans":[1,20],"type":"scatter","x":{},"y":0.32221609421335773,"xend":{},"yend":0.32221609421335773,"mode":"lines","line":{"color":"black","dash":"dash"},"name":"95% CI","showlegend":true,"legendgroup":"ci","inherit":true},"9d9518fccd5d.3":{"alpha_stroke":1,"sizes":[10,100],"spans":[1,20],"type":"scatter","x":{},"y":-0.32221609421335773,"xend":{},"yend":-0.32221609421335773,"mode":"lines","line":{"color":"black","dash":"dash"},"name":"95% CI","showlegend":false,"legendgroup":"ci","inherit":true}},"layout":{"margin":{"b":40,"l":60,"t":25,"r":10},"yaxis":{"domain":[0,1],"automargin":true,"title":"ACF"},"xaxis":{"domain":[0,1],"automargin":true,"title":"Lags"},"hovermode":"closest","showlegend":true},"source":"A","config":{"modeBarButtonsToAdd":["hoverclosest","hovercompare"],"showSendToCloud":false},"data":[{"type":"bar","marker":{"color":"rgba(31,119,180,1)","line":{"color":"rgba(31,119,180,1)"}},"error_y":{"color":"rgba(31,119,180,1)"},"error_x":{"color":"rgba(31,119,180,1)"},"xaxis":"x","yaxis":"y","frame":null},{"type":"bar","x":[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36],"y":[0.83072101837902235,0.668951444284694,0.50472574927189506,0.38119031858414193,0.2777252903387738,0.1566187097918196,0.049669476453420999,-0.072711793525182367,-0.14919729552258246,-0.25790873943718418,-0.34191929693960632,-0.40779130578469813,-0.42790320168350177,-0.46684938715081803,-0.45431943852922579,-0.3854340005383704,-0.3499571035407435,-0.30616928797238074,-0.27953382812264715,-0.22378127471973841,-0.15287950307566639,-0.059602238568431797,0.0076729930983691387,0.023216772476227332,0.052311814885141361,0.057074729124776159,0.053401075874543957,0.034469747079706792,0.063334420041829875,0.055836035611621586,0.065906235479313069,0.076027567510557656,0.11141266830628477,0.1409781278344498,0.13656555904340564,0.088147941640782532],"name":"Lags","marker":{"color":"#0072B5","line":{"color":"rgb(8,48,107)","width":1.5}},"error_y":{"color":"rgba(255,127,14,1)"},"error_x":{"color":"rgba(255,127,14,1)"},"xaxis":"x","yaxis":"y","frame":null},{"type":"scatter","x":[1,36],"y":[0.32221609421335773,0.32221609421335773],"mode":"lines","line":{"color":"black","dash":"dash"},"name":"95% CI","showlegend":true,"legendgroup":"ci","marker":{"color":"rgba(44,160,44,1)","line":{"color":"rgba(44,160,44,1)"}},"error_y":{"color":"rgba(44,160,44,1)"},"error_x":{"color":"rgba(44,160,44,1)"},"xaxis":"x","yaxis":"y","frame":null},{"type":"scatter","x":[1,36],"y":[-0.32221609421335773,-0.32221609421335773],"mode":"lines","line":{"color":"black","dash":"dash"},"name":"95% CI","showlegend":false,"legendgroup":"ci","marker":{"color":"rgba(214,39,40,1)","line":{"color":"rgba(214,39,40,1)"}},"error_y":{"color":"rgba(214,39,40,1)"},"error_x":{"color":"rgba(214,39,40,1)"},"xaxis":"x","yaxis":"y","frame":null}],"highlight":{"on":"plotly_click","persistent":false,"dynamic":false,"selectize":false,"opacityDim":0.20000000000000001,"selected":{"opacity":1},"debounce":0},"shinyEvents":["plotly_hover","plotly_click","plotly_selected","plotly_relayout","plotly_brushed","plotly_brushing","plotly_clickannotation","plotly_doubleclick","plotly_deselect","plotly_afterplot","plotly_sunburstclick"],"base_url":"https://plot.ly"},"evals":[],"jsHooks":[]}</script>
+</div>
+</div>
+<p>The ACF plot indicates that the residuals have a high correlation with the first lags. This is classic case, that adding an ARIMA model (i.e., regression with ARIMA errors) could improve the fit of the model.</p>
+</section>
+<section id="forecast-the-trend" class="level3">
+<h3 class="anchored" data-anchor-id="forecast-the-trend">Forecast the Trend</h3>
+<p>To forecast the future observations of the series, we will have to generate a new data frame with the corresponding features we used to train the model. Let’ say that we want to generate a 5 year forecast. We will use the <code>new_data</code> function from the <strong>tsibble</strong> library to generate a new data frame with the corresponding features for the next 5 years:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb14"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>h <span class="ot">&lt;-</span> <span class="dv">5</span></span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>future_data <span class="ot">&lt;-</span> <span class="fu">new_data</span>(ts1, <span class="at">n =</span> h)</span>
+<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a>future_data</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tsibble: 5 x 1 [1Y]
+  index
+  &lt;dbl&gt;
+1  2024
+2  2025
+3  2026
+4  2027
+5  2028</code></pre>
+</div>
+</div>
+<p>Next, we will generate the trend feature:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb16"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a>trend_start <span class="ot">&lt;-</span> <span class="fu">max</span>(ts1<span class="sc">$</span>trend) <span class="sc">+</span> <span class="dv">1</span></span>
+<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a>trend_end <span class="ot">&lt;-</span> trend_start <span class="sc">+</span> h <span class="sc">-</span> <span class="dv">1</span></span>
+<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a>future_data<span class="sc">$</span>trend <span class="ot">&lt;-</span> trend_start<span class="sc">:</span>trend_end</span>
+<span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a>future_data</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tsibble: 5 x 2 [1Y]
+  index trend
+  &lt;dbl&gt; &lt;int&gt;
+1  2024    38
+2  2025    39
+3  2026    40
+4  2027    41
+5  2028    42</code></pre>
+</div>
+</div>
+<p>Now we can use the <code>predict</code> function to create the forecast:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb18"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a>fc1 <span class="ot">&lt;-</span> <span class="fu">predict</span>(<span class="at">object =</span> md1, <span class="at">newdata =</span> future_data, <span class="at">interval =</span> <span class="st">"prediction"</span>, <span class="at">level =</span> <span class="fl">0.95</span>)</span>
+<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a>future_data<span class="sc">$</span>yhat <span class="ot">&lt;-</span> fc1[,<span class="dv">1</span>]</span>
+<span id="cb18-4"><a href="#cb18-4" aria-hidden="true" tabindex="-1"></a>future_data<span class="sc">$</span>lower <span class="ot">&lt;-</span> fc1[,<span class="dv">2</span>]</span>
+<span id="cb18-5"><a href="#cb18-5" aria-hidden="true" tabindex="-1"></a>future_data<span class="sc">$</span>upper <span class="ot">&lt;-</span> fc1[,<span class="dv">3</span>]</span>
+<span id="cb18-6"><a href="#cb18-6" aria-hidden="true" tabindex="-1"></a>future_data</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tsibble: 5 x 5 [1Y]
+  index trend      yhat     lower     upper
+  &lt;dbl&gt; &lt;int&gt;     &lt;dbl&gt;     &lt;dbl&gt;     &lt;dbl&gt;
+1  2024    38 11725578. 11376638. 12074518.
+2  2025    39 11820778. 11470391. 12171165.
+3  2026    40 11915978. 11564077. 12267880.
+4  2027    41 12011178. 11657695. 12364662.
+5  2028    42 12106379. 11751248. 12461510.</code></pre>
+</div>
+</div>
+<p>Let’s plot the forecast</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb20"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a>p1 <span class="sc">|&gt;</span> </span>
+<span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a><span class="fu">add_ribbons</span>(<span class="at">x =</span> future_data<span class="sc">$</span>index, <span class="at">ymin =</span> future_data<span class="sc">$</span>lower,</span>
+<span id="cb20-3"><a href="#cb20-3" aria-hidden="true" tabindex="-1"></a><span class="at">ymax =</span> future_data<span class="sc">$</span>upper, <span class="at">name =</span> <span class="st">"95% Prediction Interval"</span>,</span>
+<span id="cb20-4"><a href="#cb20-4" aria-hidden="true" tabindex="-1"></a> <span class="at">line =</span> <span class="fu">list</span>(<span class="at">color =</span> <span class="st">'rgba(7, 164, 181, 0.05)'</span>),</span>
+<span id="cb20-5"><a href="#cb20-5" aria-hidden="true" tabindex="-1"></a>              <span class="at">fillcolor =</span> <span class="st">'rgba(7, 164, 181, 0.2)'</span>) <span class="sc">|&gt;</span></span>
+<span id="cb20-6"><a href="#cb20-6" aria-hidden="true" tabindex="-1"></a><span class="fu">add_lines</span>(<span class="at">x =</span> future_data<span class="sc">$</span>index, </span>
+<span id="cb20-7"><a href="#cb20-7" aria-hidden="true" tabindex="-1"></a><span class="at">y =</span> future_data<span class="sc">$</span>yhat, </span>
+<span id="cb20-8"><a href="#cb20-8" aria-hidden="true" tabindex="-1"></a><span class="at">name =</span> <span class="st">"Forecast"</span>, </span>
+<span id="cb20-9"><a href="#cb20-9" aria-hidden="true" tabindex="-1"></a><span class="at">line =</span> <span class="fu">list</span>(<span class="at">color =</span> <span class="st">"black"</span>, <span class="at">dash =</span> <span class="st">"dash"</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div class="plotly html-widget html-fill-item" id="htmlwidget-d5fe712c223ba1f91484" style="width:100%;height:464px;"></div>
+<script type="application/json" data-for="htmlwidget-d5fe712c223ba1f91484">{"x":{"visdat":{"9d956305913e":["function () ","plotlyVisDat"]},"cur_data":"9d956305913e","attrs":{"9d956305913e":{"alpha_stroke":1,"sizes":[10,100],"spans":[1,20],"x":[1987,1988,1989,1990,1991,1992,1993,1994,1995,1996,1997,1998,1999,2000,2001,2002,2003,2004,2005,2006,2007,2008,2009,2010,2011,2012,2013,2014,2015,2016,2017,2018,2019,2020,2021,2022,2023],"y":[7904858,8113034,8313776,8497848,8634774,8680613,8726187,8790733,8865541,8969308,9060473,9181928,9331206,9370797,9603122,9726642,9803311,9957412,10124433,10329224,10439220,10515162,10510950,10542584,10625190,10681916,10754908,10781720,10969597,10916368,11004853,11025789,11112094,11186350,11232552,11280329,11355756],"type":"scatter","mode":"lines","name":"Actual","inherit":true},"9d956305913e.1":{"alpha_stroke":1,"sizes":[10,100],"spans":[1,20],"x":[1987,1988,1989,1990,1991,1992,1993,1994,1995,1996,1997,1998,1999,2000,2001,2002,2003,2004,2005,2006,2007,2008,2009,2010,2011,2012,2013,2014,2015,2016,2017,2018,2019,2020,2021,2022,2023],"y":[8203166.3968705591,8298366.6991465194,8393567.0014224797,8488767.3036984392,8583967.6059743986,8679167.9082503598,8774368.2105263192,8869568.5128022805,8964768.8150782399,9059969.1173541993,9155169.4196301606,9250369.72190612,9345570.0241820812,9440770.3264580406,9535970.628734,9631170.9310099613,9726371.2332859207,9821571.535561882,9916771.8378378414,10011972.140113801,10107172.442389762,10202372.744665721,10297573.046941681,10392773.349217642,10487973.651493602,10583173.953769563,10678374.256045522,10773574.558321482,10868774.860597443,10963975.162873402,11059175.465149364,11154375.767425323,11249576.069701282,11344776.371977244,11439976.674253203,11535176.976529164,11630377.278805124],"type":"scatter","mode":"lines","line":{"color":"black","dash":"dash"},"name":"Fitted","inherit":true},"9d956305913e.2":{"alpha_stroke":1,"sizes":[10,100],"spans":[1,20],"x":[2024,2025,2026,2027,2028],"ymin":[11376637.515432943,11470390.928023608,11564076.555605261,11657695.269552602,11751247.963871576],"ymax":[12074517.646729223,12171164.83869048,12267879.815660747,12364661.706265328,12461509.616498273],"type":"scatter","mode":"lines","hoveron":"points","fill":"toself","name":"95% Prediction Interval","line":{"color":"rgba(7, 164, 181, 0.05)"},"fillcolor":"rgba(7, 164, 181, 0.2)","inherit":true},"9d956305913e.3":{"alpha_stroke":1,"sizes":[10,100],"spans":[1,20],"x":[2024,2025,2026,2027,2028],"y":[11725577.581081083,11820777.883357044,11915978.185633004,12011178.487908965,12106378.790184924],"type":"scatter","mode":"lines","name":"Forecast","line":{"color":"black","dash":"dash"},"inherit":true}},"layout":{"margin":{"b":40,"l":60,"t":25,"r":10},"xaxis":{"domain":[0,1],"automargin":true,"title":[]},"yaxis":{"domain":[0,1],"automargin":true,"title":[]},"hovermode":"closest","showlegend":true},"source":"A","config":{"modeBarButtonsToAdd":["hoverclosest","hovercompare"],"showSendToCloud":false},"data":[{"x":[1987,1988,1989,1990,1991,1992,1993,1994,1995,1996,1997,1998,1999,2000,2001,2002,2003,2004,2005,2006,2007,2008,2009,2010,2011,2012,2013,2014,2015,2016,2017,2018,2019,2020,2021,2022,2023],"y":[7904858,8113034,8313776,8497848,8634774,8680613,8726187,8790733,8865541,8969308,9060473,9181928,9331206,9370797,9603122,9726642,9803311,9957412,10124433,10329224,10439220,10515162,10510950,10542584,10625190,10681916,10754908,10781720,10969597,10916368,11004853,11025789,11112094,11186350,11232552,11280329,11355756],"type":"scatter","mode":"lines","name":"Actual","marker":{"color":"rgba(31,119,180,1)","line":{"color":"rgba(31,119,180,1)"}},"error_y":{"color":"rgba(31,119,180,1)"},"error_x":{"color":"rgba(31,119,180,1)"},"line":{"color":"rgba(31,119,180,1)"},"xaxis":"x","yaxis":"y","frame":null},{"x":[1987,1988,1989,1990,1991,1992,1993,1994,1995,1996,1997,1998,1999,2000,2001,2002,2003,2004,2005,2006,2007,2008,2009,2010,2011,2012,2013,2014,2015,2016,2017,2018,2019,2020,2021,2022,2023],"y":[8203166.3968705591,8298366.6991465194,8393567.0014224797,8488767.3036984392,8583967.6059743986,8679167.9082503598,8774368.2105263192,8869568.5128022805,8964768.8150782399,9059969.1173541993,9155169.4196301606,9250369.72190612,9345570.0241820812,9440770.3264580406,9535970.628734,9631170.9310099613,9726371.2332859207,9821571.535561882,9916771.8378378414,10011972.140113801,10107172.442389762,10202372.744665721,10297573.046941681,10392773.349217642,10487973.651493602,10583173.953769563,10678374.256045522,10773574.558321482,10868774.860597443,10963975.162873402,11059175.465149364,11154375.767425323,11249576.069701282,11344776.371977244,11439976.674253203,11535176.976529164,11630377.278805124],"type":"scatter","mode":"lines","line":{"color":"black","dash":"dash"},"name":"Fitted","marker":{"color":"rgba(255,127,14,1)","line":{"color":"rgba(255,127,14,1)"}},"error_y":{"color":"rgba(255,127,14,1)"},"error_x":{"color":"rgba(255,127,14,1)"},"xaxis":"x","yaxis":"y","frame":null},{"fillcolor":"rgba(7, 164, 181, 0.2)","x":[2024,2025,2026,2027,2028,2028,2028,2027,2026,2025,2024],"type":"scatter","mode":"lines","hoveron":"points","fill":"toself","name":"95% Prediction Interval","line":{"color":"rgba(7, 164, 181, 0.05)"},"y":[11376637.515432943,11470390.928023608,11564076.555605261,11657695.269552602,11751247.963871576,11751247.963871576,12461509.616498273,12364661.706265328,12267879.815660747,12171164.83869048,12074517.646729223],"marker":{"color":"rgba(44,160,44,1)","line":{"color":"rgba(44,160,44,1)"}},"error_y":{"color":"rgba(44,160,44,1)"},"error_x":{"color":"rgba(44,160,44,1)"},"xaxis":"x","yaxis":"y","frame":null},{"x":[2024,2025,2026,2027,2028],"y":[11725577.581081083,11820777.883357044,11915978.185633004,12011178.487908965,12106378.790184924],"type":"scatter","mode":"lines","name":"Forecast","line":{"color":"black","dash":"dash"},"marker":{"color":"rgba(214,39,40,1)","line":{"color":"rgba(214,39,40,1)"}},"error_y":{"color":"rgba(214,39,40,1)"},"error_x":{"color":"rgba(214,39,40,1)"},"xaxis":"x","yaxis":"y","frame":null}],"highlight":{"on":"plotly_click","persistent":false,"dynamic":false,"selectize":false,"opacityDim":0.20000000000000001,"selected":{"opacity":1},"debounce":0},"shinyEvents":["plotly_hover","plotly_click","plotly_selected","plotly_relayout","plotly_brushed","plotly_brushing","plotly_clickannotation","plotly_doubleclick","plotly_deselect","plotly_afterplot","plotly_sunburstclick"],"base_url":"https://plot.ly"},"evals":[],"jsHooks":[]}</script>
+</div>
+</div>
+</section>
+<section id="improving-the-model" class="level3">
+<h3 class="anchored" data-anchor-id="improving-the-model">Improving the model</h3>
+<p>Reviewing the results, there are two features we can use to improve the forecast:</p>
+<ul>
+<li>Piecewise linear trend</li>
+<li>Adding AR model</li>
+<li>Combing both approaches</li>
+</ul>
+<section id="piecewise-linear-trend" class="level4">
+<h4 class="anchored" data-anchor-id="piecewise-linear-trend">Piecewise Linear Trend</h4>
+<p>Eyeballing the series, you can notice a change in the trend at around 2008. We will use this information to create a piecewise linear trend.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb21"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a>s <span class="ot">&lt;-</span> ts1<span class="sc">$</span>trend[<span class="fu">which</span>(ts1<span class="sc">$</span>index <span class="sc">==</span> <span class="dv">2008</span>)]</span>
+<span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a>ts1<span class="sc">$</span>trend2 <span class="ot">&lt;-</span> <span class="fu">pmax</span>(<span class="dv">0</span>, ts1<span class="sc">$</span>trend <span class="sc">-</span> s)</span>
+<span id="cb21-3"><a href="#cb21-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-4"><a href="#cb21-4" aria-hidden="true" tabindex="-1"></a>md2 <span class="ot">&lt;-</span> <span class="fu">lm</span>(y <span class="sc">~</span> trend <span class="sc">+</span> trend2, <span class="at">data =</span> ts1)</span>
+<span id="cb21-5"><a href="#cb21-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-6"><a href="#cb21-6" aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(md2)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>
+Call:
+lm(formula = y ~ trend + trend2, data = ts1)
+
+Residuals:
+    Min      1Q  Median      3Q     Max 
+-144490  -28221   -6315   24236  165205 
+
+Coefficients:
+            Estimate Std. Error t value Pr(&gt;|t|)    
+(Intercept)  7888615      30832  255.86  &lt; 2e-16 ***
+trend         116191       2107   55.14  &lt; 2e-16 ***
+trend2        -55336       4692  -11.79 1.45e-13 ***
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+
+Residual standard error: 73280 on 34 degrees of freedom
+Multiple R-squared:  0.9953,    Adjusted R-squared:  0.9951 
+F-statistic:  3629 on 2 and 34 DF,  p-value: &lt; 2.2e-16</code></pre>
+</div>
+</div>
+<p>Let’s fit the model and plot it:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb23"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a>fit2<span class="ot">&lt;-</span> <span class="fu">predict</span>(<span class="at">object =</span> md2, <span class="at">newdata =</span> ts1,  <span class="at">interval =</span> <span class="st">"confidence"</span>, <span class="at">level =</span> <span class="fl">0.95</span>)</span>
+<span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a>ts1<span class="sc">$</span>fit2 <span class="ot">&lt;-</span> fit2[, <span class="dv">1</span>]</span>
+<span id="cb23-3"><a href="#cb23-3" aria-hidden="true" tabindex="-1"></a>p2 <span class="ot">&lt;-</span> p <span class="sc">|&gt;</span> </span>
+<span id="cb23-4"><a href="#cb23-4" aria-hidden="true" tabindex="-1"></a><span class="fu">add_lines</span>(<span class="at">x =</span> ts1<span class="sc">$</span>index, <span class="at">y =</span> ts1<span class="sc">$</span>fit2, <span class="at">mode =</span> <span class="st">"lines"</span>, <span class="at">line =</span> <span class="fu">list</span>(<span class="at">color =</span> <span class="st">"black"</span>, <span class="at">dash =</span> <span class="st">"dash"</span>), <span class="at">name =</span> <span class="st">"Fitted"</span>) </span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>We will add to the plot the features:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb24"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a>trend1 <span class="ot">&lt;-</span> <span class="fu">plot_ly</span>() <span class="sc">|&gt;</span></span>
+<span id="cb24-2"><a href="#cb24-2" aria-hidden="true" tabindex="-1"></a><span class="fu">add_lines</span>(<span class="at">x =</span> ts1<span class="sc">$</span>index, <span class="at">y =</span> ts1<span class="sc">$</span>trend, <span class="at">name =</span> <span class="st">"Main Trend Feature"</span>)</span>
+<span id="cb24-3"><a href="#cb24-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-4"><a href="#cb24-4" aria-hidden="true" tabindex="-1"></a>trend2 <span class="ot">&lt;-</span> <span class="fu">plot_ly</span>() <span class="sc">|&gt;</span></span>
+<span id="cb24-5"><a href="#cb24-5" aria-hidden="true" tabindex="-1"></a><span class="fu">add_lines</span>(<span class="at">x =</span> ts1<span class="sc">$</span>index, <span class="at">y =</span> ts1<span class="sc">$</span>trend2, <span class="at">name =</span> <span class="st">"Piecewise Trend Feature"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>ts_stl_d <span class="ot">&lt;-</span> ts <span class="sc">|&gt;</span></span>
-<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">model</span>(</span>
-<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>    <span class="fu">STL</span>(y <span class="sc">~</span> <span class="fu">trend</span>(<span class="at">window =</span> <span class="dv">11</span>) <span class="sc">+</span></span>
-<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>                   <span class="fu">season</span>(<span class="at">window =</span> <span class="dv">7</span>),</span>
-<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">robust =</span> <span class="cn">TRUE</span>),</span>
-<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">|&gt;</span></span>
-<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">components</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-</div>
-<div class="cell">
-<div class="sourceCode cell-code" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="fu">plot_decomposition</span>(ts_stl_d, <span class="at">var =</span> <span class="st">"y"</span>, <span class="at">outliers =</span> <span class="cn">TRUE</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb25"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a><span class="fu">subplot</span>(p2, trend1, trend2, <span class="at">nrows =</span> <span class="dv">3</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
-<div class="plotly html-widget html-fill-item" id="htmlwidget-2a4f296b3e2d0999cf39" style="width:100%;height:928px;"></div>
-<script type="application/json" data-for="htmlwidget-2a4f296b3e2d0999cf39">{"x":{"data":[{"x":[1987,1988,1989,1990,1991,1992,1993,1994,1995,1996,1997,1998,1999,2000,2001,2002,2003,2004,2005,2006,2007,2008,2009,2010,2011,2012,2013,2014,2015,2016,2017,2018,2019,2020,2021,2022,2023],"y":[7904858,8113034,8313776,8497848,8634774,8680613,8726187,8790733,8865541,8969308,9060473,9181928,9331206,9370797,9603122,9726642,9803311,9957412,10124433,10329224,10439220,10515162,10510950,10542584,10625190,10681916,10754908,10781720,10969597,10916368,11004853,11025789,11112094,11186350,11232552,11280329,11355756],"mode":"lines","line":{"color":"#0072B5"},"showlegend":false,"name":"Actual","type":"scatter","marker":{"color":"rgba(31,119,180,1)","line":{"color":"rgba(31,119,180,1)"}},"error_y":{"color":"rgba(31,119,180,1)"},"error_x":{"color":"rgba(31,119,180,1)"},"xaxis":"x","yaxis":"y","frame":null},{"x":[1991,null,2007,null,2015],"y":[8634774,null,10439220,null,10969597],"mode":"lines+markers","line":{"color":"#0072B5"},"showlegend":false,"name":"Actual","type":"scatter","marker":{"color":"orange","line":{"color":"rgba(255,127,14,1)"}},"error_y":{"color":"rgba(255,127,14,1)"},"error_x":{"color":"rgba(255,127,14,1)"},"xaxis":"x","yaxis":"y","frame":null},{"mode":"lines+markers","line":{"color":"#0072B5"},"showlegend":false,"type":"scatter","marker":{"color":"red","line":{"color":"rgba(44,160,44,1)"}},"error_y":{"color":"rgba(44,160,44,1)"},"error_x":{"color":"rgba(44,160,44,1)"},"xaxis":"x","yaxis":"y","frame":null},{"x":[1987,1988,1989,1990,1991,1992,1993,1994,1995,1996,1997,1998,1999,2000,2001,2002,2003,2004,2005,2006,2007,2008,2009,2010,2011,2012,2013,2014,2015,2016,2017,2018,2019,2020,2021,2022,2023],"y":[7942158.3199999994,8105462.04,8268765.7599999998,8417186.1999999993,8543421.4399999995,8646145.1199999992,8733032.9999999981,8813624.3999999985,8897161.5614814796,8986425.9199999981,9087344.7199999969,9199451.1066666655,9318273.631604936,9440469.9358024672,9572131.694320986,9707497.9595061727,9844633.5372839514,9985709.7323456798,10123529.626666669,10248175.189629633,10355385.741728399,10444697.116543215,10515227.565925932,10574923.306666672,10633408.651851857,10691956.720000004,10753053.834074078,10815607.376790127,10879634.13283951,10937983.827654326,10997649.194074079,11055329.384814819,11114188.179679018,11171958.670740746,11231573.390740747,11290720.530777754,11349867.670814764],"mode":"lines","line":{"color":"#0072B5"},"showlegend":false,"name":"Trend","type":"scatter","marker":{"color":"rgba(214,39,40,1)","line":{"color":"rgba(214,39,40,1)"}},"error_y":{"color":"rgba(214,39,40,1)"},"error_x":{"color":"rgba(214,39,40,1)"},"xaxis":"x","yaxis":"y2","frame":null},{"x":[1987,1988,1989,1990,1991,1992,1993,1994,1995,1996,1997,1998,1999,2000,2001,2002,2003,2004,2005,2006,2007,2008,2009,2010,2011,2012,2013,2014,2015,2016,2017,2018,2019,2020,2021,2022,2023],"y":[7904858,8113034,8313776,8497848,8634774,8680613,8726187,8790733,8865541,8969308,9060473,9181928,9331206,9370797,9603122,9726642,9803311,9957412,10124433,10329224,10439220,10515162,10510950,10542584,10625190,10681916,10754908,10781720,10969597,10916368,11004853,11025789,11112094,11186350,11232552,11280329,11355756],"mode":"lines","line":{"color":"#0072B5"},"showlegend":false,"name":"Seasonal Adjusted","type":"scatter","marker":{"color":"rgba(148,103,189,1)","line":{"color":"rgba(148,103,189,1)"}},"error_y":{"color":"rgba(148,103,189,1)"},"error_x":{"color":"rgba(148,103,189,1)"},"xaxis":"x","yaxis":"y3","frame":null},{"x":[1987,1988,1989,1990,1991,1992,1993,1994,1995,1996,1997,1998,1999,2000,2001,2002,2003,2004,2005,2006,2007,2008,2009,2010,2011,2012,2013,2014,2015,2016,2017,2018,2019,2020,2021,2022,2023],"y":[-37300.319999999367,7571.9599999999627,45010.240000000224,80661.800000000745,91352.560000000522,34467.88000000082,-6845.9999999981374,-22891.39999999851,-31620.561481479555,-17117.919999998063,-26871.719999996945,-17523.106666665524,12932.368395064026,-69672.935802467167,30990.305679013953,19144.040493827313,-41322.537283951417,-28297.732345679775,903.3733333311975,81048.81037036702,83834.258271601051,70464.883456785232,-4277.565925931558,-32339.30666667223,-8218.6518518570811,-10040.720000004396,1854.1659259218723,-33887.376790126786,89962.867160489783,-21615.827654326335,7203.8059259206057,-29540.384814819321,-2094.179679017514,14391.329259254038,978.60925925336778,-10391.530777754262,5888.3291852362454],"mode":"lines","line":{"color":"#0072B5"},"showlegend":false,"name":"Irregular","type":"scatter","marker":{"color":"rgba(140,86,75,1)","line":{"color":"rgba(140,86,75,1)"}},"error_y":{"color":"rgba(140,86,75,1)"},"error_x":{"color":"rgba(140,86,75,1)"},"xaxis":"x","yaxis":"y4","frame":null},{"x":[1987,2023],"y":[82098.502817731132,82098.502817731132],"mode":"lines","line":{"color":"orange","dash":"dash"},"showlegend":false,"name":"2SD","type":"scatter","marker":{"color":"rgba(227,119,194,1)","line":{"color":"rgba(227,119,194,1)"}},"error_y":{"color":"rgba(227,119,194,1)"},"error_x":{"color":"rgba(227,119,194,1)"},"xaxis":"x","yaxis":"y4","frame":null},{"x":[1987,2023],"y":[-82098.502817731132,-82098.502817731132],"mode":"lines","line":{"color":"orange","dash":"dash"},"showlegend":false,"name":"-2SD","type":"scatter","marker":{"color":"rgba(127,127,127,1)","line":{"color":"rgba(127,127,127,1)"}},"error_y":{"color":"rgba(127,127,127,1)"},"error_x":{"color":"rgba(127,127,127,1)"},"xaxis":"x","yaxis":"y4","frame":null},{"x":[1987,2023],"y":[123147.75422659671,123147.75422659671],"mode":"lines","line":{"color":"red","dash":"dash"},"showlegend":false,"name":"3SD","type":"scatter","marker":{"color":"rgba(188,189,34,1)","line":{"color":"rgba(188,189,34,1)"}},"error_y":{"color":"rgba(188,189,34,1)"},"error_x":{"color":"rgba(188,189,34,1)"},"xaxis":"x","yaxis":"y4","frame":null},{"x":[1987,2023],"y":[-123147.75422659671,-123147.75422659671],"mode":"lines","line":{"color":"red","dash":"dash"},"showlegend":false,"name":"-3SD","type":"scatter","marker":{"color":"rgba(23,190,207,1)","line":{"color":"rgba(23,190,207,1)"}},"error_y":{"color":"rgba(23,190,207,1)"},"error_x":{"color":"rgba(23,190,207,1)"},"xaxis":"x","yaxis":"y4","frame":null}],"layout":{"xaxis":{"domain":[0,1],"automargin":true,"title":"Decomposition Method: STL; Frequency: Year","anchor":"y4"},"yaxis4":{"domain":[0,0.23000000000000001],"automargin":true,"title":"Irregular","anchor":"x"},"yaxis3":{"domain":[0.27000000000000002,0.47999999999999998],"automargin":true,"title":"Seasonal Adjusted","anchor":"x"},"yaxis2":{"domain":[0.52000000000000002,0.72999999999999998],"automargin":true,"title":"Trend","anchor":"x"},"yaxis":{"domain":[0.77000000000000002,1],"automargin":true,"title":"Actial","anchor":"x"},"annotations":[],"shapes":[],"images":[],"margin":{"b":40,"l":60,"t":25,"r":10},"hovermode":"closest","showlegend":false},"attrs":{"1189025f85b54":{"x":{},"y":{},"mode":"lines","line":{"color":"#0072B5"},"showlegend":false,"name":"Actual","alpha_stroke":1,"sizes":[10,100],"spans":[1,20],"type":"scatter"},"1189025f85b54.1":{"x":{},"y":{},"mode":"lines","line":{"color":"#0072B5"},"showlegend":false,"name":"Actual","alpha_stroke":1,"sizes":[10,100],"spans":[1,20],"type":"scatter","marker":{"color":"orange"},"inherit":true},"1189025f85b54.2":{"x":{},"y":{},"mode":"lines","line":{"color":"#0072B5"},"showlegend":false,"name":"Actual","alpha_stroke":1,"sizes":[10,100],"spans":[1,20],"type":"scatter","marker":{"color":"red"},"inherit":true},"11890b4b39c8":{"x":{},"y":{},"mode":"lines","line":{"color":"#0072B5"},"showlegend":false,"name":"Trend","alpha_stroke":1,"sizes":[10,100],"spans":[1,20],"type":"scatter"},"11890762f8727":{"x":{},"y":{},"mode":"lines","line":{"color":"#0072B5"},"showlegend":false,"name":"Seasonal Adjusted","alpha_stroke":1,"sizes":[10,100],"spans":[1,20],"type":"scatter"},"118906c47e333":{"x":{},"y":{},"mode":"lines","line":{"color":"#0072B5"},"showlegend":false,"name":"Irregular","alpha_stroke":1,"sizes":[10,100],"spans":[1,20],"type":"scatter"},"118906c47e333.1":{"x":1987,"y":82098.502817731132,"mode":"lines","line":{"color":"orange","dash":"dash"},"showlegend":false,"name":"2SD","alpha_stroke":1,"sizes":[10,100],"spans":[1,20],"type":"scatter","xend":2023,"yend":82098.502817731132,"inherit":true},"118906c47e333.2":{"x":1987,"y":-82098.502817731132,"mode":"lines","line":{"color":"orange","dash":"dash"},"showlegend":false,"name":"-2SD","alpha_stroke":1,"sizes":[10,100],"spans":[1,20],"type":"scatter","xend":2023,"yend":-82098.502817731132,"inherit":true},"118906c47e333.3":{"x":1987,"y":123147.75422659671,"mode":"lines","line":{"color":"red","dash":"dash"},"showlegend":false,"name":"3SD","alpha_stroke":1,"sizes":[10,100],"spans":[1,20],"type":"scatter","xend":2023,"yend":123147.75422659671,"inherit":true},"118906c47e333.4":{"x":1987,"y":-123147.75422659671,"mode":"lines","line":{"color":"red","dash":"dash"},"showlegend":false,"name":"-3SD","alpha_stroke":1,"sizes":[10,100],"spans":[1,20],"type":"scatter","xend":2023,"yend":-123147.75422659671,"inherit":true}},"source":"A","config":{"modeBarButtonsToAdd":["hoverclosest","hovercompare"],"showSendToCloud":false},"highlight":{"on":"plotly_click","persistent":false,"dynamic":false,"selectize":false,"opacityDim":0.20000000000000001,"selected":{"opacity":1},"debounce":0},"subplot":true,"shinyEvents":["plotly_hover","plotly_click","plotly_selected","plotly_relayout","plotly_brushed","plotly_brushing","plotly_clickannotation","plotly_doubleclick","plotly_deselect","plotly_afterplot","plotly_sunburstclick"],"base_url":"https://plot.ly"},"evals":[],"jsHooks":[]}</script>
+<div class="plotly html-widget html-fill-item" id="htmlwidget-eac94baa0d3a48d30ea9" style="width:100%;height:928px;"></div>
+<script type="application/json" data-for="htmlwidget-eac94baa0d3a48d30ea9">{"x":{"data":[{"x":[1987,1988,1989,1990,1991,1992,1993,1994,1995,1996,1997,1998,1999,2000,2001,2002,2003,2004,2005,2006,2007,2008,2009,2010,2011,2012,2013,2014,2015,2016,2017,2018,2019,2020,2021,2022,2023],"y":[7904858,8113034,8313776,8497848,8634774,8680613,8726187,8790733,8865541,8969308,9060473,9181928,9331206,9370797,9603122,9726642,9803311,9957412,10124433,10329224,10439220,10515162,10510950,10542584,10625190,10681916,10754908,10781720,10969597,10916368,11004853,11025789,11112094,11186350,11232552,11280329,11355756],"type":"scatter","mode":"lines","name":"Actual","marker":{"color":"rgba(31,119,180,1)","line":{"color":"rgba(31,119,180,1)"}},"error_y":{"color":"rgba(31,119,180,1)"},"error_x":{"color":"rgba(31,119,180,1)"},"line":{"color":"rgba(31,119,180,1)"},"xaxis":"x","yaxis":"y","frame":null},{"x":[1987,1988,1989,1990,1991,1992,1993,1994,1995,1996,1997,1998,1999,2000,2001,2002,2003,2004,2005,2006,2007,2008,2009,2010,2011,2012,2013,2014,2015,2016,2017,2018,2019,2020,2021,2022,2023],"y":[8004806.1100354614,8120996.9188548187,8237187.7276741751,8353378.5364935314,8469569.3453128878,8585760.1541322451,8701950.9629516006,8818141.7717709579,8934332.5805903152,9050523.3894096706,9166714.1982290279,9282905.0070483852,9399095.8158677407,9515286.624687098,9631477.4335064553,9747668.2423258107,9863859.051145168,9980049.8599645253,10096240.668783881,10212431.477603238,10328622.286422594,10444813.095241951,10505667.681186279,10566522.267130606,10627376.853074934,10688231.439019263,10749086.024963589,10809940.610907918,10870795.196852244,10931649.782796571,10992504.368740899,11053358.954685228,11114213.540629555,11175068.126573883,11235922.71251821,11296777.298462538,11357631.884406867],"type":"scatter","mode":"lines","line":{"color":"black","dash":"dash"},"name":"Fitted","marker":{"color":"rgba(255,127,14,1)","line":{"color":"rgba(255,127,14,1)"}},"error_y":{"color":"rgba(255,127,14,1)"},"error_x":{"color":"rgba(255,127,14,1)"},"xaxis":"x","yaxis":"y","frame":null},{"x":[1987,1988,1989,1990,1991,1992,1993,1994,1995,1996,1997,1998,1999,2000,2001,2002,2003,2004,2005,2006,2007,2008,2009,2010,2011,2012,2013,2014,2015,2016,2017,2018,2019,2020,2021,2022,2023],"y":[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37],"type":"scatter","mode":"lines","name":"Main Trend Feature","marker":{"color":"rgba(44,160,44,1)","line":{"color":"rgba(44,160,44,1)"}},"error_y":{"color":"rgba(44,160,44,1)"},"error_x":{"color":"rgba(44,160,44,1)"},"line":{"color":"rgba(44,160,44,1)"},"xaxis":"x2","yaxis":"y2","frame":null},{"x":[1987,1988,1989,1990,1991,1992,1993,1994,1995,1996,1997,1998,1999,2000,2001,2002,2003,2004,2005,2006,2007,2008,2009,2010,2011,2012,2013,2014,2015,2016,2017,2018,2019,2020,2021,2022,2023],"y":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15],"type":"scatter","mode":"lines","name":"Piecewise Trend Feature","marker":{"color":"rgba(214,39,40,1)","line":{"color":"rgba(214,39,40,1)"}},"error_y":{"color":"rgba(214,39,40,1)"},"error_x":{"color":"rgba(214,39,40,1)"},"line":{"color":"rgba(214,39,40,1)"},"xaxis":"x3","yaxis":"y3","frame":null}],"layout":{"xaxis":{"domain":[0,1],"automargin":true,"anchor":"y"},"xaxis2":{"domain":[0,1],"automargin":true,"anchor":"y2"},"xaxis3":{"domain":[0,1],"automargin":true,"anchor":"y3"},"yaxis3":{"domain":[0,0.31333333333333335],"automargin":true,"anchor":"x3"},"yaxis2":{"domain":[0.35333333333333339,0.64666666666666672],"automargin":true,"anchor":"x2"},"yaxis":{"domain":[0.68666666666666676,1],"automargin":true,"anchor":"x"},"annotations":[],"shapes":[],"images":[],"margin":{"b":40,"l":60,"t":25,"r":10},"hovermode":"closest","showlegend":true},"attrs":{"9d956305913e":{"alpha_stroke":1,"sizes":[10,100],"spans":[1,20],"x":[1987,1988,1989,1990,1991,1992,1993,1994,1995,1996,1997,1998,1999,2000,2001,2002,2003,2004,2005,2006,2007,2008,2009,2010,2011,2012,2013,2014,2015,2016,2017,2018,2019,2020,2021,2022,2023],"y":[7904858,8113034,8313776,8497848,8634774,8680613,8726187,8790733,8865541,8969308,9060473,9181928,9331206,9370797,9603122,9726642,9803311,9957412,10124433,10329224,10439220,10515162,10510950,10542584,10625190,10681916,10754908,10781720,10969597,10916368,11004853,11025789,11112094,11186350,11232552,11280329,11355756],"type":"scatter","mode":"lines","name":"Actual","inherit":true},"9d956305913e.1":{"alpha_stroke":1,"sizes":[10,100],"spans":[1,20],"x":[1987,1988,1989,1990,1991,1992,1993,1994,1995,1996,1997,1998,1999,2000,2001,2002,2003,2004,2005,2006,2007,2008,2009,2010,2011,2012,2013,2014,2015,2016,2017,2018,2019,2020,2021,2022,2023],"y":[8004806.1100354614,8120996.9188548187,8237187.7276741751,8353378.5364935314,8469569.3453128878,8585760.1541322451,8701950.9629516006,8818141.7717709579,8934332.5805903152,9050523.3894096706,9166714.1982290279,9282905.0070483852,9399095.8158677407,9515286.624687098,9631477.4335064553,9747668.2423258107,9863859.051145168,9980049.8599645253,10096240.668783881,10212431.477603238,10328622.286422594,10444813.095241951,10505667.681186279,10566522.267130606,10627376.853074934,10688231.439019263,10749086.024963589,10809940.610907918,10870795.196852244,10931649.782796571,10992504.368740899,11053358.954685228,11114213.540629555,11175068.126573883,11235922.71251821,11296777.298462538,11357631.884406867],"type":"scatter","mode":"lines","line":{"color":"black","dash":"dash"},"name":"Fitted","inherit":true},"9d9579e5acd4":{"alpha_stroke":1,"sizes":[10,100],"spans":[1,20],"x":[1987,1988,1989,1990,1991,1992,1993,1994,1995,1996,1997,1998,1999,2000,2001,2002,2003,2004,2005,2006,2007,2008,2009,2010,2011,2012,2013,2014,2015,2016,2017,2018,2019,2020,2021,2022,2023],"y":[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37],"type":"scatter","mode":"lines","name":"Main Trend Feature","inherit":true},"9d9544c89b00":{"alpha_stroke":1,"sizes":[10,100],"spans":[1,20],"x":[1987,1988,1989,1990,1991,1992,1993,1994,1995,1996,1997,1998,1999,2000,2001,2002,2003,2004,2005,2006,2007,2008,2009,2010,2011,2012,2013,2014,2015,2016,2017,2018,2019,2020,2021,2022,2023],"y":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15],"type":"scatter","mode":"lines","name":"Piecewise Trend Feature","inherit":true}},"source":"A","config":{"modeBarButtonsToAdd":["hoverclosest","hovercompare"],"showSendToCloud":false},"highlight":{"on":"plotly_click","persistent":false,"dynamic":false,"selectize":false,"opacityDim":0.20000000000000001,"selected":{"opacity":1},"debounce":0},"subplot":true,"shinyEvents":["plotly_hover","plotly_click","plotly_selected","plotly_relayout","plotly_brushed","plotly_brushing","plotly_clickannotation","plotly_doubleclick","plotly_deselect","plotly_afterplot","plotly_sunburstclick"],"base_url":"https://plot.ly"},"evals":[],"jsHooks":[]}</script>
 </div>
 </div>
+<p>Let’s review the residuals:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb26"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb26-1"><a href="#cb26-1" aria-hidden="true" tabindex="-1"></a>ts1<span class="sc">$</span>res2 <span class="ot">&lt;-</span> ts1<span class="sc">$</span>y <span class="sc">-</span> ts1<span class="sc">$</span>fit2</span>
+<span id="cb26-2"><a href="#cb26-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb26-3"><a href="#cb26-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb26-4"><a href="#cb26-4" aria-hidden="true" tabindex="-1"></a><span class="fu">plot_ly</span>(<span class="at">x =</span> ts1<span class="sc">$</span>index, <span class="at">y =</span> ts1<span class="sc">$</span>res2, <span class="at">type =</span> <span class="st">"scatter"</span>, <span class="at">mode =</span> <span class="st">"markers"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div class="plotly html-widget html-fill-item" id="htmlwidget-62894993097692ea1e2d" style="width:100%;height:464px;"></div>
+<script type="application/json" data-for="htmlwidget-62894993097692ea1e2d">{"x":{"visdat":{"9d95473759be":["function () ","plotlyVisDat"]},"cur_data":"9d95473759be","attrs":{"9d95473759be":{"x":[1987,1988,1989,1990,1991,1992,1993,1994,1995,1996,1997,1998,1999,2000,2001,2002,2003,2004,2005,2006,2007,2008,2009,2010,2011,2012,2013,2014,2015,2016,2017,2018,2019,2020,2021,2022,2023],"y":[-99948.110035461374,-7962.9188548186794,76588.272325824946,144469.46350646857,165204.6546871122,94852.845867754892,24236.037048399448,-27408.771770957857,-68791.580590315163,-81215.389409670606,-106241.19822902791,-100977.00704838522,-67889.815867740661,-144489.62468709797,-28355.433506455272,-21026.242325810716,-60548.051145168021,-22637.859964525327,28192.33121611923,116792.52239676192,110597.71357740648,70348.904758049175,5282.318813720718,-23938.267130605876,-2186.8530749343336,-6315.4390192627907,5821.9750364106148,-28220.610907917842,98801.803147755563,-15281.782796571031,12348.631259100512,-27569.954685227945,-2119.5406295545399,11281.873426117003,-3370.7125182095915,-16448.298462538049,-1875.8844068665057],"mode":"markers","alpha_stroke":1,"sizes":[10,100],"spans":[1,20],"type":"scatter"}},"layout":{"margin":{"b":40,"l":60,"t":25,"r":10},"xaxis":{"domain":[0,1],"automargin":true,"title":[]},"yaxis":{"domain":[0,1],"automargin":true,"title":[]},"hovermode":"closest","showlegend":false},"source":"A","config":{"modeBarButtonsToAdd":["hoverclosest","hovercompare"],"showSendToCloud":false},"data":[{"x":[1987,1988,1989,1990,1991,1992,1993,1994,1995,1996,1997,1998,1999,2000,2001,2002,2003,2004,2005,2006,2007,2008,2009,2010,2011,2012,2013,2014,2015,2016,2017,2018,2019,2020,2021,2022,2023],"y":[-99948.110035461374,-7962.9188548186794,76588.272325824946,144469.46350646857,165204.6546871122,94852.845867754892,24236.037048399448,-27408.771770957857,-68791.580590315163,-81215.389409670606,-106241.19822902791,-100977.00704838522,-67889.815867740661,-144489.62468709797,-28355.433506455272,-21026.242325810716,-60548.051145168021,-22637.859964525327,28192.33121611923,116792.52239676192,110597.71357740648,70348.904758049175,5282.318813720718,-23938.267130605876,-2186.8530749343336,-6315.4390192627907,5821.9750364106148,-28220.610907917842,98801.803147755563,-15281.782796571031,12348.631259100512,-27569.954685227945,-2119.5406295545399,11281.873426117003,-3370.7125182095915,-16448.298462538049,-1875.8844068665057],"mode":"markers","type":"scatter","marker":{"color":"rgba(31,119,180,1)","line":{"color":"rgba(31,119,180,1)"}},"error_y":{"color":"rgba(31,119,180,1)"},"error_x":{"color":"rgba(31,119,180,1)"},"line":{"color":"rgba(31,119,180,1)"},"xaxis":"x","yaxis":"y","frame":null}],"highlight":{"on":"plotly_click","persistent":false,"dynamic":false,"selectize":false,"opacityDim":0.20000000000000001,"selected":{"opacity":1},"debounce":0},"shinyEvents":["plotly_hover","plotly_click","plotly_selected","plotly_relayout","plotly_brushed","plotly_brushing","plotly_clickannotation","plotly_doubleclick","plotly_deselect","plotly_afterplot","plotly_sunburstclick"],"base_url":"https://plot.ly"},"evals":[],"jsHooks":[]}</script>
+</div>
+</div>
+<p>And the ACF of the residuals:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb27"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb27-1"><a href="#cb27-1" aria-hidden="true" tabindex="-1"></a><span class="fu">plot_acf</span>(<span class="at">ts =</span> ts1, <span class="at">var =</span> <span class="st">"res2"</span>, <span class="at">lag_max =</span> <span class="dv">60</span>, <span class="at">frequency =</span> <span class="cn">NULL</span>, <span class="at">alpha =</span> <span class="fl">0.05</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div class="plotly html-widget html-fill-item" id="htmlwidget-e3f3ab467c66538127aa" style="width:100%;height:464px;"></div>
+<script type="application/json" data-for="htmlwidget-e3f3ab467c66538127aa">{"x":{"visdat":{"9d954d67867c":["function () ","plotlyVisDat"]},"cur_data":"9d954d67867c","attrs":{"9d954d67867c":{"alpha_stroke":1,"sizes":[10,100],"spans":[1,20],"type":"bar"},"9d954d67867c.1":{"alpha_stroke":1,"sizes":[10,100],"spans":[1,20],"type":"bar","x":[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36],"y":[0.66811804463005386,0.39608739638946461,0.067957778187173565,-0.12451019265107459,-0.22249388009708496,-0.30876359206373533,-0.32936605055811197,-0.32003657012724457,-0.29075292927523433,-0.26637042729587979,-0.2225077970011981,-0.16151792109578259,-0.0030754331091631141,0.08122904606703589,0.14066686662182759,0.25890945937367815,0.16617634447620255,0.054982565801977051,-0.074587400282710076,-0.10806710275171809,-0.053064282636757859,0.015422185869910586,0.051305429419310718,0.076367819502334122,0.06665531217557491,0.031954331539399271,-0.0025121741920401462,-0.063390590063157115,0.0011403504472175122,-0.0093647866749594286,0.0013928056455084945,-0.015459885082353275,-0.014414656003269468,0.0017758817610468204,0.009087032988419768,0.001027020065339432],"name":"Lags","marker":{"color":"#0072B5","line":{"color":"rgb(8,48,107)","width":1.5}},"inherit":true},"9d954d67867c.2":{"alpha_stroke":1,"sizes":[10,100],"spans":[1,20],"type":"scatter","x":{},"y":0.32221609421335773,"xend":{},"yend":0.32221609421335773,"mode":"lines","line":{"color":"black","dash":"dash"},"name":"95% CI","showlegend":true,"legendgroup":"ci","inherit":true},"9d954d67867c.3":{"alpha_stroke":1,"sizes":[10,100],"spans":[1,20],"type":"scatter","x":{},"y":-0.32221609421335773,"xend":{},"yend":-0.32221609421335773,"mode":"lines","line":{"color":"black","dash":"dash"},"name":"95% CI","showlegend":false,"legendgroup":"ci","inherit":true}},"layout":{"margin":{"b":40,"l":60,"t":25,"r":10},"yaxis":{"domain":[0,1],"automargin":true,"title":"ACF"},"xaxis":{"domain":[0,1],"automargin":true,"title":"Lags"},"hovermode":"closest","showlegend":true},"source":"A","config":{"modeBarButtonsToAdd":["hoverclosest","hovercompare"],"showSendToCloud":false},"data":[{"type":"bar","marker":{"color":"rgba(31,119,180,1)","line":{"color":"rgba(31,119,180,1)"}},"error_y":{"color":"rgba(31,119,180,1)"},"error_x":{"color":"rgba(31,119,180,1)"},"xaxis":"x","yaxis":"y","frame":null},{"type":"bar","x":[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36],"y":[0.66811804463005386,0.39608739638946461,0.067957778187173565,-0.12451019265107459,-0.22249388009708496,-0.30876359206373533,-0.32936605055811197,-0.32003657012724457,-0.29075292927523433,-0.26637042729587979,-0.2225077970011981,-0.16151792109578259,-0.0030754331091631141,0.08122904606703589,0.14066686662182759,0.25890945937367815,0.16617634447620255,0.054982565801977051,-0.074587400282710076,-0.10806710275171809,-0.053064282636757859,0.015422185869910586,0.051305429419310718,0.076367819502334122,0.06665531217557491,0.031954331539399271,-0.0025121741920401462,-0.063390590063157115,0.0011403504472175122,-0.0093647866749594286,0.0013928056455084945,-0.015459885082353275,-0.014414656003269468,0.0017758817610468204,0.009087032988419768,0.001027020065339432],"name":"Lags","marker":{"color":"#0072B5","line":{"color":"rgb(8,48,107)","width":1.5}},"error_y":{"color":"rgba(255,127,14,1)"},"error_x":{"color":"rgba(255,127,14,1)"},"xaxis":"x","yaxis":"y","frame":null},{"type":"scatter","x":[1,36],"y":[0.32221609421335773,0.32221609421335773],"mode":"lines","line":{"color":"black","dash":"dash"},"name":"95% CI","showlegend":true,"legendgroup":"ci","marker":{"color":"rgba(44,160,44,1)","line":{"color":"rgba(44,160,44,1)"}},"error_y":{"color":"rgba(44,160,44,1)"},"error_x":{"color":"rgba(44,160,44,1)"},"xaxis":"x","yaxis":"y","frame":null},{"type":"scatter","x":[1,36],"y":[-0.32221609421335773,-0.32221609421335773],"mode":"lines","line":{"color":"black","dash":"dash"},"name":"95% CI","showlegend":false,"legendgroup":"ci","marker":{"color":"rgba(214,39,40,1)","line":{"color":"rgba(214,39,40,1)"}},"error_y":{"color":"rgba(214,39,40,1)"},"error_x":{"color":"rgba(214,39,40,1)"},"xaxis":"x","yaxis":"y","frame":null}],"highlight":{"on":"plotly_click","persistent":false,"dynamic":false,"selectize":false,"opacityDim":0.20000000000000001,"selected":{"opacity":1},"debounce":0},"shinyEvents":["plotly_hover","plotly_click","plotly_selected","plotly_relayout","plotly_brushed","plotly_brushing","plotly_clickannotation","plotly_doubleclick","plotly_deselect","plotly_afterplot","plotly_sunburstclick"],"base_url":"https://plot.ly"},"evals":[],"jsHooks":[]}</script>
+</div>
+</div>
+<p>We can noticed from the residuals and ACF plots that the model goodness of fit improved with the addition of a second trend feature. Yet, the ACF plot indicate that some correlation left on the residuals within the first lag. An AR model with order 1 can help to remove this correlation.</p>
+</section>
+</section>
+<section id="ar-model" class="level3">
+<h3 class="anchored" data-anchor-id="ar-model">AR model</h3>
+<p>The Auto Regressive (AR) model is a common approach in time series forecasting to model time series with high correlation with its past lags. The AR model is part of a family of models that construct the ARIMA family of models.</p>
+<p>At its core, AR model is a regression of the series with its previous lags. For example, AR 1 model would be a regression of the series with its lag one:</p>
+<p><span class="math display">\[
+Y_t = \alpha + \beta * Y_{t-1}
+\]</span></p>
+<p>Let’s create a lag 1 feature:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb28"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb28-1"><a href="#cb28-1" aria-hidden="true" tabindex="-1"></a>ts1<span class="sc">$</span>lag1 <span class="ot">&lt;-</span> dplyr<span class="sc">::</span><span class="fu">lag</span>(ts1<span class="sc">$</span>y, <span class="at">n =</span> <span class="dv">1</span>)</span>
+<span id="cb28-2"><a href="#cb28-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb28-3"><a href="#cb28-3" aria-hidden="true" tabindex="-1"></a>ts1</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tsibble: 37 x 10 [1Y]
+   index       y series_id trend     fit1     res1 trend2   fit2    res2    lag1
+   &lt;int&gt;   &lt;int&gt; &lt;chr&gt;     &lt;int&gt;    &lt;dbl&gt;    &lt;dbl&gt;  &lt;dbl&gt;  &lt;dbl&gt;   &lt;dbl&gt;   &lt;int&gt;
+ 1  1987 7904858 SCA           1 8203166. -298308.      0 8.00e6 -99948.      NA
+ 2  1988 8113034 SCA           2 8298367. -185333.      0 8.12e6  -7963. 7904858
+ 3  1989 8313776 SCA           3 8393567.  -79791.      0 8.24e6  76588. 8113034
+ 4  1990 8497848 SCA           4 8488767.    9081.      0 8.35e6 144469. 8313776
+ 5  1991 8634774 SCA           5 8583968.   50806.      0 8.47e6 165205. 8497848
+ 6  1992 8680613 SCA           6 8679168.    1445.      0 8.59e6  94853. 8634774
+ 7  1993 8726187 SCA           7 8774368.  -48181.      0 8.70e6  24236. 8680613
+ 8  1994 8790733 SCA           8 8869569.  -78836.      0 8.82e6 -27409. 8726187
+ 9  1995 8865541 SCA           9 8964769.  -99228.      0 8.93e6 -68792. 8790733
+10  1996 8969308 SCA          10 9059969.  -90661.      0 9.05e6 -81215. 8865541
+# ℹ 27 more rows</code></pre>
+</div>
+</div>
+<p>Let’s now fit the model:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb30"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb30-1"><a href="#cb30-1" aria-hidden="true" tabindex="-1"></a>md3 <span class="ot">&lt;-</span> <span class="fu">lm</span>(y <span class="sc">~</span> trend <span class="sc">+</span> lag1, <span class="at">data =</span> ts1)</span>
+<span id="cb30-2"><a href="#cb30-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb30-3"><a href="#cb30-3" aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(md3)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>
+Call:
+lm(formula = y ~ trend + lag1, data = ts1)
+
+Residuals:
+    Min      1Q  Median      3Q     Max 
+-114027  -37159    3657   32800  126391 
+
+Coefficients:
+             Estimate Std. Error t value Pr(&gt;|t|)    
+(Intercept) 7.944e+05  5.156e+05   1.541    0.133    
+trend       5.062e+03  6.291e+03   0.805    0.427    
+lag1        9.193e-01  6.443e-02  14.267 1.14e-15 ***
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+
+Residual standard error: 59240 on 33 degrees of freedom
+  (1 observation deleted due to missingness)
+Multiple R-squared:  0.9967,    Adjusted R-squared:  0.9965 
+F-statistic:  4970 on 2 and 33 DF,  p-value: &lt; 2.2e-16</code></pre>
+</div>
+</div>
+<p>We will refit the model and plot it:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb32"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb32-1"><a href="#cb32-1" aria-hidden="true" tabindex="-1"></a>fit3<span class="ot">&lt;-</span> <span class="fu">predict</span>(<span class="at">object =</span> md3, <span class="at">newdata =</span> ts1,  <span class="at">interval =</span> <span class="st">"confidence"</span>, <span class="at">level =</span> <span class="fl">0.95</span>)</span>
+<span id="cb32-2"><a href="#cb32-2" aria-hidden="true" tabindex="-1"></a>ts1<span class="sc">$</span>fit3 <span class="ot">&lt;-</span> fit3[, <span class="dv">1</span>]</span>
+<span id="cb32-3"><a href="#cb32-3" aria-hidden="true" tabindex="-1"></a>p3 <span class="ot">&lt;-</span> p <span class="sc">|&gt;</span> </span>
+<span id="cb32-4"><a href="#cb32-4" aria-hidden="true" tabindex="-1"></a><span class="fu">add_lines</span>(<span class="at">x =</span> ts1<span class="sc">$</span>index, <span class="at">y =</span> ts1<span class="sc">$</span>fit3, <span class="at">mode =</span> <span class="st">"lines"</span>, <span class="at">line =</span> <span class="fu">list</span>(<span class="at">color =</span> <span class="st">"black"</span>, <span class="at">dash =</span> <span class="st">"dash"</span>), <span class="at">name =</span> <span class="st">"Fitted"</span>) </span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>Let’s review the residual ACF plot:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb33"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb33-1"><a href="#cb33-1" aria-hidden="true" tabindex="-1"></a>ts1<span class="sc">$</span>res3 <span class="ot">&lt;-</span> ts1<span class="sc">$</span>y <span class="sc">-</span> ts1<span class="sc">$</span>fit3</span>
+<span id="cb33-2"><a href="#cb33-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb33-3"><a href="#cb33-3" aria-hidden="true" tabindex="-1"></a><span class="fu">plot_acf</span>(<span class="at">ts =</span> ts1, <span class="at">var =</span> <span class="st">"res3"</span>, <span class="at">lag_max =</span> <span class="dv">60</span>, <span class="at">frequency =</span> <span class="cn">NULL</span>, <span class="at">alpha =</span> <span class="fl">0.05</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div class="plotly html-widget html-fill-item" id="htmlwidget-4c5f6b0d588dc496900e" style="width:100%;height:464px;"></div>
+<script type="application/json" data-for="htmlwidget-4c5f6b0d588dc496900e">{"x":{"visdat":{"9d957ee6bef9":["function () ","plotlyVisDat"]},"cur_data":"9d957ee6bef9","attrs":{"9d957ee6bef9":{"alpha_stroke":1,"sizes":[10,100],"spans":[1,20],"type":"bar"},"9d957ee6bef9.1":{"alpha_stroke":1,"sizes":[10,100],"spans":[1,20],"type":"bar","x":[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35],"y":[0.10916494798369729,0.27937580380127125,-0.025703568194731498,-0.025711505856510837,-0.025556271313116649,-0.14475751126393693,-0.059022304622620564,-0.17593060930978618,-0.083988396240258625,-0.18593732403680149,-0.15893985611684136,-0.23033544506346842,-0.10859292086448255,0.030831132937651957,-0.14612260040731079,0.22715315416165502,0.065317430355703018,0.10785442730813866,0.0059147191182811094,-0.067805634919742619,-0.015843027975449502,0.0073296082861167783,-0.00076199900131698642,0.080708660660316955,0.044812716220061041,0.026590782355401001,0.010489718985614639,-0.026471979049103041,0.022605440739595088,0.0025558616836642246,-0.0042427437809008043,-0.014846668863286512,-0.015389492728651061,-0.006286196561327115,0.0015416515724754616],"name":"Lags","marker":{"color":"#0072B5","line":{"color":"rgb(8,48,107)","width":1.5}},"inherit":true},"9d957ee6bef9.2":{"alpha_stroke":1,"sizes":[10,100],"spans":[1,20],"type":"scatter","x":{},"y":0.32221609421335773,"xend":{},"yend":0.32221609421335773,"mode":"lines","line":{"color":"black","dash":"dash"},"name":"95% CI","showlegend":true,"legendgroup":"ci","inherit":true},"9d957ee6bef9.3":{"alpha_stroke":1,"sizes":[10,100],"spans":[1,20],"type":"scatter","x":{},"y":-0.32221609421335773,"xend":{},"yend":-0.32221609421335773,"mode":"lines","line":{"color":"black","dash":"dash"},"name":"95% CI","showlegend":false,"legendgroup":"ci","inherit":true}},"layout":{"margin":{"b":40,"l":60,"t":25,"r":10},"yaxis":{"domain":[0,1],"automargin":true,"title":"ACF"},"xaxis":{"domain":[0,1],"automargin":true,"title":"Lags"},"hovermode":"closest","showlegend":true},"source":"A","config":{"modeBarButtonsToAdd":["hoverclosest","hovercompare"],"showSendToCloud":false},"data":[{"type":"bar","marker":{"color":"rgba(31,119,180,1)","line":{"color":"rgba(31,119,180,1)"}},"error_y":{"color":"rgba(31,119,180,1)"},"error_x":{"color":"rgba(31,119,180,1)"},"xaxis":"x","yaxis":"y","frame":null},{"type":"bar","x":[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35],"y":[0.10916494798369729,0.27937580380127125,-0.025703568194731498,-0.025711505856510837,-0.025556271313116649,-0.14475751126393693,-0.059022304622620564,-0.17593060930978618,-0.083988396240258625,-0.18593732403680149,-0.15893985611684136,-0.23033544506346842,-0.10859292086448255,0.030831132937651957,-0.14612260040731079,0.22715315416165502,0.065317430355703018,0.10785442730813866,0.0059147191182811094,-0.067805634919742619,-0.015843027975449502,0.0073296082861167783,-0.00076199900131698642,0.080708660660316955,0.044812716220061041,0.026590782355401001,0.010489718985614639,-0.026471979049103041,0.022605440739595088,0.0025558616836642246,-0.0042427437809008043,-0.014846668863286512,-0.015389492728651061,-0.006286196561327115,0.0015416515724754616],"name":"Lags","marker":{"color":"#0072B5","line":{"color":"rgb(8,48,107)","width":1.5}},"error_y":{"color":"rgba(255,127,14,1)"},"error_x":{"color":"rgba(255,127,14,1)"},"xaxis":"x","yaxis":"y","frame":null},{"type":"scatter","x":[1,35],"y":[0.32221609421335773,0.32221609421335773],"mode":"lines","line":{"color":"black","dash":"dash"},"name":"95% CI","showlegend":true,"legendgroup":"ci","marker":{"color":"rgba(44,160,44,1)","line":{"color":"rgba(44,160,44,1)"}},"error_y":{"color":"rgba(44,160,44,1)"},"error_x":{"color":"rgba(44,160,44,1)"},"xaxis":"x","yaxis":"y","frame":null},{"type":"scatter","x":[1,35],"y":[-0.32221609421335773,-0.32221609421335773],"mode":"lines","line":{"color":"black","dash":"dash"},"name":"95% CI","showlegend":false,"legendgroup":"ci","marker":{"color":"rgba(214,39,40,1)","line":{"color":"rgba(214,39,40,1)"}},"error_y":{"color":"rgba(214,39,40,1)"},"error_x":{"color":"rgba(214,39,40,1)"},"xaxis":"x","yaxis":"y","frame":null}],"highlight":{"on":"plotly_click","persistent":false,"dynamic":false,"selectize":false,"opacityDim":0.20000000000000001,"selected":{"opacity":1},"debounce":0},"shinyEvents":["plotly_hover","plotly_click","plotly_selected","plotly_relayout","plotly_brushed","plotly_brushing","plotly_clickannotation","plotly_doubleclick","plotly_deselect","plotly_afterplot","plotly_sunburstclick"],"base_url":"https://plot.ly"},"evals":[],"jsHooks":[]}</script>
+</div>
+</div>
+<div class="callout callout-style-default callout-warning callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Using Lags
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>The main downside of using lags are that you will have to produce the lags for your forecast assuming the lag number is smaller than the forecast horizon. In this case, you will have to use a recursive function and use previous predication values as lags for your next prediction.</p>
+</div>
+</div>
+<p>A great article about piecewise linear trends modeling can be found in the following <a href="https://robjhyndman.com/hyndsight/piecewise-linear-trends/">blog post</a> by Prof.&nbsp;Rob J Hyndman.</p>
+</section>
 </section>
 
 </main>

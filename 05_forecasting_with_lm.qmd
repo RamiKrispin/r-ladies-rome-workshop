@@ -45,7 +45,8 @@ ts1 <- ts1 |>
 dplyr::filter(index > 1986)
 
 
-p <- plot_ly(data = ts1, x = ~index, y = ~y, type = "scatter", mode = "lines") 
+p <- plot_ly() |>
+add_lines(x = ts1$index, y = ts1$y, type = "scatter", mode = "lines", name = "Actual") 
 
 p
 ```
@@ -76,8 +77,10 @@ We will fit the model on the series to see the trend fit:
 ```{r}
 fit1 <- predict(object = md1, newdata = ts1,  interval = "confidence", level = 0.95)
 ts1$fit1 <- fit1[, 1]
-p |> 
-add_lines(data = ts1, x = ~index, y = ~fit1, mode = "lines", line = list(color = "black", dash = "dash")) 
+p1 <- p |> 
+add_lines(x = ts1$index, y = ts1$fit1, mode = "lines", line = list(color = "black", dash = "dash"), name = "Fitted") 
+
+p1
 ```
 
 
@@ -95,8 +98,178 @@ plot_ly(x = ts1$index, y = ts1$res1, type = "scatter", mode = "markers")
 Clearly, you can see that some patterns are left in the residuals. We can check for autocorrelation:
 
 ```{r}
-plot_acf(ts = ts1, var = "res1", lag_max = 60, frequency = NULL)
+plot_acf(ts = ts1, var = "res1", lag_max = 60, frequency = NULL, alpha = 0.05)
 ```
+
+The ACF plot indicates that the residuals have a high correlation with the first lags. This is classic case, that adding an ARIMA model (i.e., regression with ARIMA errors) could improve the fit of the model.
+
+### Forecast the Trend
+
+To forecast the future observations of the series, we will have to generate a new data frame with the corresponding features we used to train the model. Let' say that we want to generate a 5 year forecast. We will use the `new_data` function from the **tsibble** library to generate a new data frame with the corresponding features for the next 5 years:
+
+```{r}
+h <- 5
+future_data <- new_data(ts1, n = h)
+future_data
+```
+
+Next, we will generate the trend feature:
+
+```{r}
+trend_start <- max(ts1$trend) + 1
+trend_end <- trend_start + h - 1
+future_data$trend <- trend_start:trend_end
+future_data
+```
+
+Now we can use the `predict` function to create the forecast:
+
+```{r}
+fc1 <- predict(object = md1, newdata = future_data, interval = "prediction", level = 0.95)
+
+future_data$yhat <- fc1[,1]
+future_data$lower <- fc1[,2]
+future_data$upper <- fc1[,3]
+future_data
+```
+
+Let's plot the forecast
+```{r}
+p1 |> 
+add_ribbons(x = future_data$index, ymin = future_data$lower,
+ymax = future_data$upper, name = "95% Prediction Interval",
+ line = list(color = 'rgba(7, 164, 181, 0.05)'),
+              fillcolor = 'rgba(7, 164, 181, 0.2)') |>
+add_lines(x = future_data$index, 
+y = future_data$yhat, 
+name = "Forecast", 
+line = list(color = "black", dash = "dash"))
+```
+
+### Improving the model
+
+Reviewing the results, there are two features we can use to improve the forecast:
+
+- Piecewise linear trend
+- Adding AR model 
+- Combing both approaches
+
+
+#### Piecewise Linear Trend
+
+Eyeballing the series, you can notice a change in the trend at around 2008. We will use this information to create a piecewise linear trend.
+
+```{r}
+s <- ts1$trend[which(ts1$index == 2008)]
+ts1$trend2 <- pmax(0, ts1$trend - s)
+
+md2 <- lm(y ~ trend + trend2, data = ts1)
+
+summary(md2)
+
+```
+
+
+Let's fit the model and plot it:
+
+```{r}
+fit2<- predict(object = md2, newdata = ts1,  interval = "confidence", level = 0.95)
+ts1$fit2 <- fit2[, 1]
+p2 <- p |> 
+add_lines(x = ts1$index, y = ts1$fit2, mode = "lines", line = list(color = "black", dash = "dash"), name = "Fitted") 
+
+```
+
+We will add to the plot the features:
+
+```{r}
+trend1 <- plot_ly() |>
+add_lines(x = ts1$index, y = ts1$trend, name = "Main Trend Feature")
+
+trend2 <- plot_ly() |>
+add_lines(x = ts1$index, y = ts1$trend2, name = "Piecewise Trend Feature")
+```
+
+
+```{r}
+#| fig-height: 10
+subplot(p2, trend1, trend2, nrows = 3)
+
+```
+
+
+Let's review the residuals:
+
+```{r}
+ts1$res2 <- ts1$y - ts1$fit2
+
+
+plot_ly(x = ts1$index, y = ts1$res2, type = "scatter", mode = "markers")
+```
+
+
+And the ACF of the residuals:
+```{r}
+plot_acf(ts = ts1, var = "res2", lag_max = 60, frequency = NULL, alpha = 0.05)
+```
+
+We can noticed from the residuals and ACF plots that the model goodness of fit improved with the addition of a second trend feature. Yet, the ACF plot indicate that some correlation left on the residuals within the first lag. An AR model with order 1 can help to remove this correlation.
+
+### AR model
+
+The Auto Regressive (AR) model is a common approach in time series forecasting to model time series with high correlation with its past lags. The AR model is part of a family of models that construct the ARIMA family of models.
+
+At its core, AR model is a regression of the series with its previous lags. For example, AR 1 model would be a regression of the series with its lag one:
+
+$$
+Y_t = \alpha + \beta * Y_{t-1} 
+$$
+
+Let's create a lag 1 feature:
+
+```{r}
+ts1$lag1 <- dplyr::lag(ts1$y, n = 1)
+
+ts1
+```
+
+
+Let's now fit the model:
+
+```{r}
+md3 <- lm(y ~ trend + lag1, data = ts1)
+
+summary(md3)
+
+```
+
+We will refit the model and plot it:
+```{r}
+fit3<- predict(object = md3, newdata = ts1,  interval = "confidence", level = 0.95)
+ts1$fit3 <- fit3[, 1]
+p3 <- p |> 
+add_lines(x = ts1$index, y = ts1$fit3, mode = "lines", line = list(color = "black", dash = "dash"), name = "Fitted") 
+```
+
+Let's review the residual ACF plot:
+
+```{r}
+ts1$res3 <- ts1$y - ts1$fit3
+
+plot_acf(ts = ts1, var = "res3", lag_max = 60, frequency = NULL, alpha = 0.05)
+```
+
+
+
+::: {.callout-warning}
+## Using Lags
+
+The main downside of using lags are that you will have to produce the lags for your forecast assuming the lag number is smaller than the forecast horizon. In this case, you will have to use a recursive function and use previous predication values as lags for your next prediction.
+:::
+
+A great article about piecewise linear trends modeling can be found in the following [blog post](https://robjhyndman.com/hyndsight/piecewise-linear-trends/) by Prof. Rob J Hyndman.
+
+
 
 
 
