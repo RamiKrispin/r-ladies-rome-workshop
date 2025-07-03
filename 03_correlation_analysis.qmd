@@ -1,0 +1,234 @@
+---
+title: "Correlation Analysis"
+author: "Rami Krispin"
+date: last-modified
+format: 
+    html:
+        code-fold: false
+        warning: false
+        toc: true
+---
+
+
+In time series analysis, correlation between a series and its previous lags is pivotal in explaining the time series variation and revealing its underlying patterns. A common example of high correlation between observations is the hourly temperature, which is highly correlated with its previous observations, as the hourly fluctuations are gradual. 
+
+There are many tools to explore time series correlation, and in this section, we will review the main method - the Auto Correlation Function (ACF).
+
+## Auto Correlation Function
+
+In most cases, the lags of the series contain valuable information about the current variation of the series. The ACF measures the correlation between a series and its previous lags. It enables us to understand what lags have predictive power. Both the stats and feasts libraries provide an implementation of the ACF method, with the [acf](https://stat.ethz.ch/R-manual/R-devel/library/stats/html/acf.html) and [ACF](https://feasts.tidyverts.org/reference/ACF.html) functions, respectively.  Let's load the required libraries and load ourtime series and explore its correlation:
+
+```{r}
+library(feasts)
+library(fabletools)
+library(tsibble)
+library(dplyr)
+library(plotly)
+```
+
+
+```{r}
+load(file = "./data/ts.RData")
+```
+
+
+### Correlation Analysis for Yearly Time Series
+
+```{r}
+plot_ly(data = ts1, x = ~index, y = ~y, type = "scatter", mode = "lines") 
+```
+
+Let's drop the first year:
+
+```{r}
+ts1 <- ts1 |> dplyr::filter(index > 1986)
+
+plot_ly(data = ts1, x = ~index, y = ~y, type = "scatter", mode = "lines") 
+```
+
+We will use the `ACF` function to calculate the series autocorrelation:
+```{r}
+acf1 <- ts1 %>% ACF(y)
+
+head(acf1)
+```
+
+Let's calculate the 95% confidence interval for the autocorrelation calculation:
+
+```{r}
+alpha <- 0.05 
+pi_upper <- qnorm(1 - alpha/2)/sqrt(nrow(ts1))
+pi_upper
+```
+
+
+And let's plot it:
+
+```{r}
+acf1 |> plot_ly(x = ~ lag, y = ~ acf, type = "bar", showlegend = FALSE) |>
+add_segments(x = ~ min(lag), xend = ~ max(lag), y = pi_upper, yend = pi_upper, line = list(color = "black", dash = "dash"), name = "Upper") |>
+add_segments(x = ~ min(lag), xend = ~ max(lag), y = - pi_upper, yend = - pi_upper, line = list(color = "black", dash = "dash"), name = "Lower") |>
+layout(title = "ACF Plot", xaxis = list(title = "Lags"), yaxis = list(title = "ACF"))
+```
+
+What can we conclude from the ACF plot? The series has a high correlation with its recent lags (i.e., 0.91 correlation with its first lag). This is a typical behavior for time series without a seasonal component and with a clear trend. Regression the series with its first lag might yield a great predictive power, which is nothing but ARIMA model with AR process of order 1.
+
+
+
+
+### Correlation Analysis for Monthly  Time Series
+
+Le'ts repeat the process for the monthly demand for natural gas in the US:
+
+```{r}
+plot_ly(data = ts2, x = ~date, y = ~y, type = "scatter", mode = "lines") 
+```
+
+Next, we will calculate the ACF for the series
+
+```{r}
+acf2 <- ts2 |> ACF(y, lag_max = 60)
+
+pi_upper <- qnorm(1 - alpha/2)/sqrt(nrow(ts2))
+pi_upper
+```
+
+And plot the ACF for the series:
+
+```{r}
+acf2 |> plot_ly(x = ~ lag, y = ~ acf, type = "bar", showlegend = FALSE) |>
+add_segments(x = ~ min(lag), xend = ~ max(lag), y = pi_upper, yend = pi_upper, line = list(color = "black", dash = "dash"), name = "Upper") |>
+add_segments(x = ~ min(lag), xend = ~ max(lag), y = - pi_upper, yend = - pi_upper, line = list(color = "black", dash = "dash"), name = "Lower") |>
+layout(title = "ACF Plot", xaxis = list(title = "Lags"), yaxis = list(title = "ACF"))
+```
+
+
+We can learn from the above output that the series has strong seasonal patterns and the first seasonal lag is the most significant. Potential regression to consider is - regression the series with lags 1, 12, and 24, which is seasonal ARIMA model with AR order 1 and seasonal AR order of 1 or 2 (depends if using lags 12 and 24).
+
+
+A more elegant way to plot the ACF output would be to highlight the seasonal lags. Let's functionalize the process and replot it:
+
+
+```{r}
+plot_acf <- function(ts, var, lag_max, frequency){
+    a <- ts |> feasts::ACF(!!rlang::sym(var), lag_max = lag_max)
+    color <- "#0072B5"
+    pi_upper <- qnorm(1 - alpha/2)/sqrt(nrow(ts))
+pi_upper
+    p <- plotly::plot_ly(type = "bar")
+    
+    if(!is.null(frequency)){
+        s <- seq(from = frequency, by = frequency, to = nrow(a))
+        a$seasonal <- NA
+        a$non_seasonal <- a$acf
+        a$non_seasonal[s] <- NA
+        a$seasonal[s] <- a$acf[s]
+
+        p <- p |> plotly::add_trace(x = a$lag, y = a$non_seasonal, name = "Non-seasonal", marker =  list(color = color,
+                      line = list(color = "rgb(8,48,107)",
+                                  width = 1.5))) |>
+                                  plotly::add_trace(x = a$lag, y = a$seasonal, name = "Seasonal", marker =  list(color = "red", line = list(color = "rgb(8,48,107)",
+                                  width = 1.5)))
+    } else {
+
+p <- p |> plotly::add_trace(x = a$lag, y = a$acf, name = "Lags", marker =  list(color = color,
+                      line = list(color = "rgb(8,48,107)",
+                                  width = 1.5)))
+
+    }
+
+    p <- p |> plotly::layout("ACF Plot", yaxis = list(title = "ACF"), xaxis = list(title = "Lags")) |>
+     plotly::add_segments(x = ~ min(a$lag), xend = ~ max(a$lag), y = pi_upper, yend = pi_upper, line = list(color = "black", dash = "dash"), name = "95% CI", showlegend = TRUE, legendgroup = "ci") |>
+    plotly::add_segments(x = ~ min(a$lag), xend = ~ max(a$lag), y = - pi_upper, yend = - pi_upper, line = list(color = "black", dash = "dash"), name = "95% CI", showlegend = FALSE, legendgroup = "ci") 
+    
+    
+    return(p)
+
+}
+
+
+plot_acf(ts = ts2, var = "y", lag_max = 60, frequency = 12)
+```
+
+
+## Lags Plots
+
+Another common way to visualize correlation of the series with its lags is using lags plots. The following code generates a plot for each lag:
+
+
+```{r}
+
+plot_lag <- function(ts, var, lag){
+  
+  d <- ts |> 
+  dplyr::mutate(lag = dplyr::lag(x= !!rlang::sym(var), n = lag))
+  
+  # Create the regression formula
+  formula <- as.formula(paste(var, "~ lag" ))
+  
+  # Fit the linear model
+  model <- lm(formula, data = d)
+  
+  # Extract model coefficients
+  intercept <- coef(model)[1]
+  slope <- coef(model)[2]
+  
+  # Format regression formula text
+  reg_formula <- paste0("y = ", round(intercept, 2),
+                        ifelse(slope < 0, " - ", " + "),
+                        abs(round(slope, 2)), paste("*lag", lag, sep = ""))
+  
+  # Get adjusted R-squared
+  adj_r2 <- summary(model)$adj.r.squared
+  adj_r2_label <- paste0("Adjusted R² = ", round(adj_r2, 3))
+  
+  # Add predicted values to data
+  d$predicted <- predict(model, newdata = d)
+  
+  # Create plot
+  p <- plot_ly(d, x = ~ lag, y = ~get(var), type = 'scatter', mode = 'markers',
+               name = 'Actual') %>%
+    add_lines(x = ~ lag, y = ~predicted, name = 'Regression Fitted Line',
+              line = list(color = "red", dash = "dash")) %>%
+    layout(title = paste(var, "vs Lag", lag, sep = " "),
+           xaxis = list(title = paste("Lag", lag, sep = " ")),
+           yaxis = list(title = var),
+           annotations = list(
+             list(x = 0.05, y = 0.95, xref = "paper", yref = "paper",
+                  text = reg_formula,
+                  showarrow = FALSE,
+                  font = list(size = 12)),
+             list(x = 0.05, y = 0.88, xref = "paper", yref = "paper",
+                  text = adj_r2_label,
+                  showarrow = FALSE,
+                  font = list(size = 12))
+           ))
+  
+  return(p)
+}
+```
+
+
+
+Let's plot the relationship between the total number of consumers of natural gas in the US with its first and 10th lags:
+```{r}
+plot_lag(ts = ts1, var = "y", lag = 1)
+```
+
+
+
+```{r}
+plot_lag(ts = ts1, var = "y", lag = 10)
+```
+
+
+Likewise, we will plot the relationship between the demand for natural gas in the US with its first and seasonal lag (12):
+
+```{r}
+plot_lag(ts = ts2, var = "y", lag = 1)
+```
+
+
+```{r}
+plot_lag(ts = ts2, var = "y", lag = 12)
+```

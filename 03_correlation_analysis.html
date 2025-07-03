@@ -1,0 +1,780 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.7.32">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="author" content="Rami Krispin">
+<meta name="dcterms.date" content="2025-07-03">
+
+<title>Correlation Analysis</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="03_correlation_analysis_files/libs/clipboard/clipboard.min.js"></script>
+<script src="03_correlation_analysis_files/libs/quarto-html/quarto.js" type="module"></script>
+<script src="03_correlation_analysis_files/libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="03_correlation_analysis_files/libs/quarto-html/popper.min.js"></script>
+<script src="03_correlation_analysis_files/libs/quarto-html/tippy.umd.min.js"></script>
+<script src="03_correlation_analysis_files/libs/quarto-html/anchor.min.js"></script>
+<link href="03_correlation_analysis_files/libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="03_correlation_analysis_files/libs/quarto-html/quarto-syntax-highlighting-37eea08aefeeee20ff55810ff984fec1.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="03_correlation_analysis_files/libs/bootstrap/bootstrap.min.js"></script>
+<link href="03_correlation_analysis_files/libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="03_correlation_analysis_files/libs/bootstrap/bootstrap-210a94f61e4454af6f1cd9d5f8fbba0b.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<link href="03_correlation_analysis_files/libs/htmltools-fill-0.5.8.1/fill.css" rel="stylesheet">
+<script src="03_correlation_analysis_files/libs/htmlwidgets-1.6.4/htmlwidgets.js"></script>
+<script src="03_correlation_analysis_files/libs/plotly-binding-4.10.2/plotly.js"></script>
+<script src="03_correlation_analysis_files/libs/typedarray-0.1/typedarray.min.js"></script>
+<script src="03_correlation_analysis_files/libs/jquery-3.5.1/jquery.min.js"></script>
+<link href="03_correlation_analysis_files/libs/crosstalk-1.2.1/css/crosstalk.min.css" rel="stylesheet">
+<script src="03_correlation_analysis_files/libs/crosstalk-1.2.1/js/crosstalk.min.js"></script>
+<link href="03_correlation_analysis_files/libs/plotly-htmlwidgets-css-2.11.1/plotly-htmlwidgets.css" rel="stylesheet">
+<script src="03_correlation_analysis_files/libs/plotly-main-2.11.1/plotly-latest.min.js"></script>
+
+
+</head>
+
+<body class="quarto-light">
+
+<div id="quarto-content" class="page-columns page-rows-contents page-layout-article">
+<div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+  <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">Table of contents</h2>
+   
+  <ul>
+  <li><a href="#auto-correlation-function" id="toc-auto-correlation-function" class="nav-link active" data-scroll-target="#auto-correlation-function">Auto Correlation Function</a>
+  <ul class="collapse">
+  <li><a href="#correlation-analysis-for-yearly-time-series" id="toc-correlation-analysis-for-yearly-time-series" class="nav-link" data-scroll-target="#correlation-analysis-for-yearly-time-series">Correlation Analysis for Yearly Time Series</a></li>
+  <li><a href="#correlation-analysis-for-monthly-time-series" id="toc-correlation-analysis-for-monthly-time-series" class="nav-link" data-scroll-target="#correlation-analysis-for-monthly-time-series">Correlation Analysis for Monthly Time Series</a></li>
+  </ul></li>
+  <li><a href="#lags-plots" id="toc-lags-plots" class="nav-link" data-scroll-target="#lags-plots">Lags Plots</a></li>
+  </ul>
+</nav>
+</div>
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">Correlation Analysis</h1>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    <div>
+    <div class="quarto-title-meta-heading">Author</div>
+    <div class="quarto-title-meta-contents">
+             <p>Rami Krispin </p>
+          </div>
+  </div>
+    
+    <div>
+    <div class="quarto-title-meta-heading">Published</div>
+    <div class="quarto-title-meta-contents">
+      <p class="date">July 3, 2025</p>
+    </div>
+  </div>
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<p>In time series analysis, correlation between a series and its previous lags is pivotal in explaining the time series variation and revealing its underlying patterns. A common example of high correlation between observations is the hourly temperature, which is highly correlated with its previous observations, as the hourly fluctuations are gradual.</p>
+<p>There are many tools to explore time series correlation, and in this section, we will review the main method - the Auto Correlation Function (ACF).</p>
+<section id="auto-correlation-function" class="level2">
+<h2 class="anchored" data-anchor-id="auto-correlation-function">Auto Correlation Function</h2>
+<p>In most cases, the lags of the series contain valuable information about the current variation of the series. The ACF measures the correlation between a series and its previous lags. It enables us to understand what lags have predictive power. Both the stats and feasts libraries provide an implementation of the ACF method, with the <a href="https://stat.ethz.ch/R-manual/R-devel/library/stats/html/acf.html">acf</a> and <a href="https://feasts.tidyverts.org/reference/ACF.html">ACF</a> functions, respectively. Let’s load the required libraries and load ourtime series and explore its correlation:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(feasts)</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(fabletools)</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(tsibble)</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(dplyr)</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(plotly)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="fu">load</span>(<span class="at">file =</span> <span class="st">"./data/ts.RData"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<section id="correlation-analysis-for-yearly-time-series" class="level3">
+<h3 class="anchored" data-anchor-id="correlation-analysis-for-yearly-time-series">Correlation Analysis for Yearly Time Series</h3>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="fu">plot_ly</span>(<span class="at">data =</span> ts1, <span class="at">x =</span> <span class="sc">~</span>index, <span class="at">y =</span> <span class="sc">~</span>y, <span class="at">type =</span> <span class="st">"scatter"</span>, <span class="at">mode =</span> <span class="st">"lines"</span>) </span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div class="plotly html-widget html-fill-item" id="htmlwidget-aa22197de58d4c6b8330" style="width:100%;height:464px;"></div>
+<script type="application/json" data-for="htmlwidget-aa22197de58d4c6b8330">{"x":{"visdat":{"115c534740283":["function () ","plotlyVisDat"]},"cur_data":"115c534740283","attrs":{"115c534740283":{"x":{},"y":{},"mode":"lines","alpha_stroke":1,"sizes":[10,100],"spans":[1,20],"type":"scatter"}},"layout":{"margin":{"b":40,"l":60,"t":25,"r":10},"xaxis":{"domain":[0,1],"automargin":true,"title":"index"},"yaxis":{"domain":[0,1],"automargin":true,"title":"y"},"hovermode":"closest","showlegend":false},"source":"A","config":{"modeBarButtonsToAdd":["hoverclosest","hovercompare"],"showSendToCloud":false},"data":[{"x":[1986,1987,1988,1989,1990,1991,1992,1993,1994,1995,1996,1997,1998,1999,2000,2001,2002,2003,2004,2005,2006,2007,2008,2009,2010,2011,2012,2013,2014,2015,2016,2017,2018,2019,2020,2021,2022,2023],"y":[7626,7904858,8113034,8313776,8497848,8634774,8680613,8726187,8790733,8865541,8969308,9060473,9181928,9331206,9370797,9603122,9726642,9803311,9957412,10124433,10329224,10439220,10515162,10510950,10542584,10625190,10681916,10754908,10781720,10969597,10916368,11004853,11025789,11112094,11186350,11232552,11280329,11355756],"mode":"lines","type":"scatter","marker":{"color":"rgba(31,119,180,1)","line":{"color":"rgba(31,119,180,1)"}},"error_y":{"color":"rgba(31,119,180,1)"},"error_x":{"color":"rgba(31,119,180,1)"},"line":{"color":"rgba(31,119,180,1)"},"xaxis":"x","yaxis":"y","frame":null}],"highlight":{"on":"plotly_click","persistent":false,"dynamic":false,"selectize":false,"opacityDim":0.20000000000000001,"selected":{"opacity":1},"debounce":0},"shinyEvents":["plotly_hover","plotly_click","plotly_selected","plotly_relayout","plotly_brushed","plotly_brushing","plotly_clickannotation","plotly_doubleclick","plotly_deselect","plotly_afterplot","plotly_sunburstclick"],"base_url":"https://plot.ly"},"evals":[],"jsHooks":[]}</script>
+</div>
+</div>
+<p>Let’s drop the first year:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>ts1 <span class="ot">&lt;-</span> ts1 <span class="sc">|&gt;</span> dplyr<span class="sc">::</span><span class="fu">filter</span>(index <span class="sc">&gt;</span> <span class="dv">1986</span>)</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="fu">plot_ly</span>(<span class="at">data =</span> ts1, <span class="at">x =</span> <span class="sc">~</span>index, <span class="at">y =</span> <span class="sc">~</span>y, <span class="at">type =</span> <span class="st">"scatter"</span>, <span class="at">mode =</span> <span class="st">"lines"</span>) </span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div class="plotly html-widget html-fill-item" id="htmlwidget-22c6bf0b230c9b94f4fc" style="width:100%;height:464px;"></div>
+<script type="application/json" data-for="htmlwidget-22c6bf0b230c9b94f4fc">{"x":{"visdat":{"115c562fa0ff7":["function () ","plotlyVisDat"]},"cur_data":"115c562fa0ff7","attrs":{"115c562fa0ff7":{"x":{},"y":{},"mode":"lines","alpha_stroke":1,"sizes":[10,100],"spans":[1,20],"type":"scatter"}},"layout":{"margin":{"b":40,"l":60,"t":25,"r":10},"xaxis":{"domain":[0,1],"automargin":true,"title":"index"},"yaxis":{"domain":[0,1],"automargin":true,"title":"y"},"hovermode":"closest","showlegend":false},"source":"A","config":{"modeBarButtonsToAdd":["hoverclosest","hovercompare"],"showSendToCloud":false},"data":[{"x":[1987,1988,1989,1990,1991,1992,1993,1994,1995,1996,1997,1998,1999,2000,2001,2002,2003,2004,2005,2006,2007,2008,2009,2010,2011,2012,2013,2014,2015,2016,2017,2018,2019,2020,2021,2022,2023],"y":[7904858,8113034,8313776,8497848,8634774,8680613,8726187,8790733,8865541,8969308,9060473,9181928,9331206,9370797,9603122,9726642,9803311,9957412,10124433,10329224,10439220,10515162,10510950,10542584,10625190,10681916,10754908,10781720,10969597,10916368,11004853,11025789,11112094,11186350,11232552,11280329,11355756],"mode":"lines","type":"scatter","marker":{"color":"rgba(31,119,180,1)","line":{"color":"rgba(31,119,180,1)"}},"error_y":{"color":"rgba(31,119,180,1)"},"error_x":{"color":"rgba(31,119,180,1)"},"line":{"color":"rgba(31,119,180,1)"},"xaxis":"x","yaxis":"y","frame":null}],"highlight":{"on":"plotly_click","persistent":false,"dynamic":false,"selectize":false,"opacityDim":0.20000000000000001,"selected":{"opacity":1},"debounce":0},"shinyEvents":["plotly_hover","plotly_click","plotly_selected","plotly_relayout","plotly_brushed","plotly_brushing","plotly_clickannotation","plotly_doubleclick","plotly_deselect","plotly_afterplot","plotly_sunburstclick"],"base_url":"https://plot.ly"},"evals":[],"jsHooks":[]}</script>
+</div>
+</div>
+<p>We will use the <code>ACF</code> function to calculate the series autocorrelation:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>acf1 <span class="ot">&lt;-</span> ts1 <span class="sc">%&gt;%</span> <span class="fu">ACF</span>(y)</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a><span class="fu">head</span>(acf1)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tsibble: 6 x 2 [1Y]
+       lag   acf
+  &lt;cf_lag&gt; &lt;dbl&gt;
+1       1Y 0.916
+2       2Y 0.836
+3       3Y 0.760
+4       4Y 0.687
+5       5Y 0.617
+6       6Y 0.546</code></pre>
+</div>
+</div>
+<p>Let’s calculate the 95% confidence interval for the autocorrelation calculation:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>alpha <span class="ot">&lt;-</span> <span class="fl">0.05</span> </span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>pi_upper <span class="ot">&lt;-</span> <span class="fu">qnorm</span>(<span class="dv">1</span> <span class="sc">-</span> alpha<span class="sc">/</span><span class="dv">2</span>)<span class="sc">/</span><span class="fu">sqrt</span>(<span class="fu">nrow</span>(ts1))</span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>pi_upper</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 0.3222161</code></pre>
+</div>
+</div>
+<p>And let’s plot it:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>acf1 <span class="sc">|&gt;</span> <span class="fu">plot_ly</span>(<span class="at">x =</span> <span class="sc">~</span> lag, <span class="at">y =</span> <span class="sc">~</span> acf, <span class="at">type =</span> <span class="st">"bar"</span>, <span class="at">showlegend =</span> <span class="cn">FALSE</span>) <span class="sc">|&gt;</span></span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a><span class="fu">add_segments</span>(<span class="at">x =</span> <span class="sc">~</span> <span class="fu">min</span>(lag), <span class="at">xend =</span> <span class="sc">~</span> <span class="fu">max</span>(lag), <span class="at">y =</span> pi_upper, <span class="at">yend =</span> pi_upper, <span class="at">line =</span> <span class="fu">list</span>(<span class="at">color =</span> <span class="st">"black"</span>, <span class="at">dash =</span> <span class="st">"dash"</span>), <span class="at">name =</span> <span class="st">"Upper"</span>) <span class="sc">|&gt;</span></span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a><span class="fu">add_segments</span>(<span class="at">x =</span> <span class="sc">~</span> <span class="fu">min</span>(lag), <span class="at">xend =</span> <span class="sc">~</span> <span class="fu">max</span>(lag), <span class="at">y =</span> <span class="sc">-</span> pi_upper, <span class="at">yend =</span> <span class="sc">-</span> pi_upper, <span class="at">line =</span> <span class="fu">list</span>(<span class="at">color =</span> <span class="st">"black"</span>, <span class="at">dash =</span> <span class="st">"dash"</span>), <span class="at">name =</span> <span class="st">"Lower"</span>) <span class="sc">|&gt;</span></span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a><span class="fu">layout</span>(<span class="at">title =</span> <span class="st">"ACF Plot"</span>, <span class="at">xaxis =</span> <span class="fu">list</span>(<span class="at">title =</span> <span class="st">"Lags"</span>), <span class="at">yaxis =</span> <span class="fu">list</span>(<span class="at">title =</span> <span class="st">"ACF"</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div class="plotly html-widget html-fill-item" id="htmlwidget-06ffd2b48dd8957523ec" style="width:100%;height:464px;"></div>
+<script type="application/json" data-for="htmlwidget-06ffd2b48dd8957523ec">{"x":{"visdat":{"115c5130f5705":["function () ","plotlyVisDat"]},"cur_data":"115c5130f5705","attrs":{"115c5130f5705":{"x":{},"y":{},"showlegend":false,"alpha_stroke":1,"sizes":[10,100],"spans":[1,20],"type":"bar"},"115c5130f5705.1":{"x":{},"y":0.32221609421335773,"showlegend":false,"alpha_stroke":1,"sizes":[10,100],"spans":[1,20],"type":"scatter","xend":{},"yend":0.32221609421335773,"mode":"lines","line":{"color":"black","dash":"dash"},"name":"Upper","inherit":true},"115c5130f5705.2":{"x":{},"y":-0.32221609421335773,"showlegend":false,"alpha_stroke":1,"sizes":[10,100],"spans":[1,20],"type":"scatter","xend":{},"yend":-0.32221609421335773,"mode":"lines","line":{"color":"black","dash":"dash"},"name":"Lower","inherit":true}},"layout":{"margin":{"b":40,"l":60,"t":25,"r":10},"title":"ACF Plot","xaxis":{"domain":[0,1],"automargin":true,"title":"Lags"},"yaxis":{"domain":[0,1],"automargin":true,"title":"ACF"},"hovermode":"closest","showlegend":false},"source":"A","config":{"modeBarButtonsToAdd":["hoverclosest","hovercompare"],"showSendToCloud":false},"data":[{"x":[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15],"y":[0.91573144225718939,0.8361202820451199,0.75976740636773676,0.68722681298267829,0.61745558345462981,0.54618962773986823,0.47124164551692754,0.39583627835477087,0.31549751258695663,0.2406673436874851,0.165152262311418,0.092384276517680441,0.023794101994314677,-0.045753265025304246,-0.1079750146171943],"showlegend":false,"type":"bar","marker":{"color":"rgba(31,119,180,1)","line":{"color":"rgba(31,119,180,1)"}},"error_y":{"color":"rgba(31,119,180,1)"},"error_x":{"color":"rgba(31,119,180,1)"},"xaxis":"x","yaxis":"y","frame":null},{"x":[1,15],"y":[0.32221609421335773,0.32221609421335773],"showlegend":false,"type":"scatter","mode":"lines","line":{"color":"black","dash":"dash"},"name":"Upper","marker":{"color":"rgba(255,127,14,1)","line":{"color":"rgba(255,127,14,1)"}},"error_y":{"color":"rgba(255,127,14,1)"},"error_x":{"color":"rgba(255,127,14,1)"},"xaxis":"x","yaxis":"y","frame":null},{"x":[1,15],"y":[-0.32221609421335773,-0.32221609421335773],"showlegend":false,"type":"scatter","mode":"lines","line":{"color":"black","dash":"dash"},"name":"Lower","marker":{"color":"rgba(44,160,44,1)","line":{"color":"rgba(44,160,44,1)"}},"error_y":{"color":"rgba(44,160,44,1)"},"error_x":{"color":"rgba(44,160,44,1)"},"xaxis":"x","yaxis":"y","frame":null}],"highlight":{"on":"plotly_click","persistent":false,"dynamic":false,"selectize":false,"opacityDim":0.20000000000000001,"selected":{"opacity":1},"debounce":0},"shinyEvents":["plotly_hover","plotly_click","plotly_selected","plotly_relayout","plotly_brushed","plotly_brushing","plotly_clickannotation","plotly_doubleclick","plotly_deselect","plotly_afterplot","plotly_sunburstclick"],"base_url":"https://plot.ly"},"evals":[],"jsHooks":[]}</script>
+</div>
+</div>
+<p>What can we conclude from the ACF plot? The series has a high correlation with its recent lags (i.e., 0.91 correlation with its first lag). This is a typical behavior for time series without a seasonal component and with a clear trend. Regression the series with its first lag might yield a great predictive power, which is nothing but ARIMA model with AR process of order 1.</p>
+</section>
+<section id="correlation-analysis-for-monthly-time-series" class="level3">
+<h3 class="anchored" data-anchor-id="correlation-analysis-for-monthly-time-series">Correlation Analysis for Monthly Time Series</h3>
+<p>Le’ts repeat the process for the monthly demand for natural gas in the US:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb10"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="fu">plot_ly</span>(<span class="at">data =</span> ts2, <span class="at">x =</span> <span class="sc">~</span>date, <span class="at">y =</span> <span class="sc">~</span>y, <span class="at">type =</span> <span class="st">"scatter"</span>, <span class="at">mode =</span> <span class="st">"lines"</span>) </span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div class="plotly html-widget html-fill-item" id="htmlwidget-c8cd31f9256e4e6264ee" style="width:100%;height:464px;"></div>
+<script type="application/json" data-for="htmlwidget-c8cd31f9256e4e6264ee">{"x":{"visdat":{"115c56ba38e00":["function () ","plotlyVisDat"]},"cur_data":"115c56ba38e00","attrs":{"115c56ba38e00":{"x":{},"y":{},"mode":"lines","alpha_stroke":1,"sizes":[10,100],"spans":[1,20],"type":"scatter"}},"layout":{"margin":{"b":40,"l":60,"t":25,"r":10},"xaxis":{"domain":[0,1],"automargin":true,"title":"date"},"yaxis":{"domain":[0,1],"automargin":true,"title":"y"},"hovermode":"closest","showlegend":false},"source":"A","config":{"modeBarButtonsToAdd":["hoverclosest","hovercompare"],"showSendToCloud":false},"data":[{"x":["2001-01-01","2001-02-01","2001-03-01","2001-04-01","2001-05-01","2001-06-01","2001-07-01","2001-08-01","2001-09-01","2001-10-01","2001-11-01","2001-12-01","2002-01-01","2002-02-01","2002-03-01","2002-04-01","2002-05-01","2002-06-01","2002-07-01","2002-08-01","2002-09-01","2002-10-01","2002-11-01","2002-12-01","2003-01-01","2003-02-01","2003-03-01","2003-04-01","2003-05-01","2003-06-01","2003-07-01","2003-08-01","2003-09-01","2003-10-01","2003-11-01","2003-12-01","2004-01-01","2004-02-01","2004-03-01","2004-04-01","2004-05-01","2004-06-01","2004-07-01","2004-08-01","2004-09-01","2004-10-01","2004-11-01","2004-12-01","2005-01-01","2005-02-01","2005-03-01","2005-04-01","2005-05-01","2005-06-01","2005-07-01","2005-08-01","2005-09-01","2005-10-01","2005-11-01","2005-12-01","2006-01-01","2006-02-01","2006-03-01","2006-04-01","2006-05-01","2006-06-01","2006-07-01","2006-08-01","2006-09-01","2006-10-01","2006-11-01","2006-12-01","2007-01-01","2007-02-01","2007-03-01","2007-04-01","2007-05-01","2007-06-01","2007-07-01","2007-08-01","2007-09-01","2007-10-01","2007-11-01","2007-12-01","2008-01-01","2008-02-01","2008-03-01","2008-04-01","2008-05-01","2008-06-01","2008-07-01","2008-08-01","2008-09-01","2008-10-01","2008-11-01","2008-12-01","2009-01-01","2009-02-01","2009-03-01","2009-04-01","2009-05-01","2009-06-01","2009-07-01","2009-08-01","2009-09-01","2009-10-01","2009-11-01","2009-12-01","2010-01-01","2010-02-01","2010-03-01","2010-04-01","2010-05-01","2010-06-01","2010-07-01","2010-08-01","2010-09-01","2010-10-01","2010-11-01","2010-12-01","2011-01-01","2011-02-01","2011-03-01","2011-04-01","2011-05-01","2011-06-01","2011-07-01","2011-08-01","2011-09-01","2011-10-01","2011-11-01","2011-12-01","2012-01-01","2012-02-01","2012-03-01","2012-04-01","2012-05-01","2012-06-01","2012-07-01","2012-08-01","2012-09-01","2012-10-01","2012-11-01","2012-12-01","2013-01-01","2013-02-01","2013-03-01","2013-04-01","2013-05-01","2013-06-01","2013-07-01","2013-08-01","2013-09-01","2013-10-01","2013-11-01","2013-12-01","2014-01-01","2014-02-01","2014-03-01","2014-04-01","2014-05-01","2014-06-01","2014-07-01","2014-08-01","2014-09-01","2014-10-01","2014-11-01","2014-12-01","2015-01-01","2015-02-01","2015-03-01","2015-04-01","2015-05-01","2015-06-01","2015-07-01","2015-08-01","2015-09-01","2015-10-01","2015-11-01","2015-12-01","2016-01-01","2016-02-01","2016-03-01","2016-04-01","2016-05-01","2016-06-01","2016-07-01","2016-08-01","2016-09-01","2016-10-01","2016-11-01","2016-12-01","2017-01-01","2017-02-01","2017-03-01","2017-04-01","2017-05-01","2017-06-01","2017-07-01","2017-08-01","2017-09-01","2017-10-01","2017-11-01","2017-12-01","2018-01-01","2018-02-01","2018-03-01","2018-04-01","2018-05-01","2018-06-01","2018-07-01","2018-08-01","2018-09-01","2018-10-01","2018-11-01","2018-12-01","2019-01-01","2019-02-01","2019-03-01","2019-04-01","2019-05-01","2019-06-01","2019-07-01","2019-08-01","2019-09-01","2019-10-01","2019-11-01","2019-12-01","2020-01-01","2020-02-01","2020-03-01","2020-04-01","2020-05-01","2020-06-01","2020-07-01","2020-08-01","2020-09-01","2020-10-01","2020-11-01","2020-12-01","2021-01-01","2021-02-01","2021-03-01","2021-04-01","2021-05-01","2021-06-01","2021-07-01","2021-08-01","2021-09-01","2021-10-01","2021-11-01","2021-12-01","2022-01-01","2022-02-01","2022-03-01","2022-04-01","2022-05-01","2022-06-01","2022-07-01","2022-08-01","2022-09-01","2022-10-01","2022-11-01","2022-12-01","2023-01-01","2023-02-01","2023-03-01","2023-04-01","2023-05-01","2023-06-01","2023-07-01","2023-08-01","2023-09-01","2023-10-01","2023-11-01","2023-12-01","2024-01-01","2024-02-01","2024-03-01","2024-04-01","2024-05-01","2024-06-01","2024-07-01","2024-08-01","2024-09-01","2024-10-01","2024-11-01","2024-12-01","2025-01-01","2025-02-01","2025-03-01","2025-04-01"],"y":[2505011,2156873,2086568,1663832,1385163,1313119,1459919,1528483,1360871,1507428,1561970,1965873,2319273,2090786,2096915,1734549,1470504,1453967,1602849,1582079,1408599,1506936,1766395,2214167,2532736,2346489,2041522,1603853,1379497,1240196,1464704,1512522,1299128,1417234,1616154,2108690,2512844,2358946,1952607,1609746,1441557,1356266,1452339,1445892,1357712,1426546,1647979,2176020,2396713,2094357,2048169,1585188,1386917,1400018,1547608,1555887,1301829,1302758,1529693,2169754,2010926,1999359,1972165,1543302,1390353,1415134,1615241,1607830,1328565,1501925,1622364,1965718,2306943,2403778,1967388,1662412,1414428,1413254,1513157,1741755,1446674,1479110,1681149,2225994,2554281,2335770,2109623,1672724,1430242,1459015,1556011,1531863,1329726,1488645,1714971,2226478,2538368,2162215,1996245,1585512,1353150,1378772,1503321,1578354,1427135,1510867,1619852,2310875,2624217,2312746,1974222,1540128,1465089,1500962,1668244,1718550,1485061,1506234,1809151,2522442,2699039,2285465,2056105,1665278,1509295,1503845,1728010,1727907,1500242,1579772,1860159,2351937,2557465,2319221,1949890,1784460,1703507,1702557,1891318,1832775,1640347,1727393,1989660,2312832,2661816,2371983,2316191,1783603,1572373,1567216,1738157,1739436,1588718,1680814,2118508,2700111,2997145,2556038,2365293,1786764,1636202,1576508,1701744,1751644,1635485,1730740,2167984,2475535,2903574,2730693,2392542,1826933,1678755,1723906,1882675,1867936,1723960,1804380,2064029,2389902,2880714,2459545,2164467,1903501,1785885,1825125,2001036,2023229,1774412,1748897,1979957,2665391,2708217,2161185,2324198,1753578,1710548,1731387,1950510,1904112,1737701,1838965,2155805,2858509,3107734,2507085,2576005,2148089,1855856,1867447,2139037,2100482,1949898,2069201,2488282,2759042,3161732,2783640,2680848,1994279,1912779,1902995,2162450,2197474,1982049,2072599,2535754,2904407,3052335,2809540,2475096,2035122,1861283,1917555,2234989,2173203,1938029,2093493,2215375,2924939,3056278,2850394,2387023,2036708,1882870,2008918,2171329,2188822,1906377,2015381,2427617,2731775,3287895,2793006,2516726,2114010,1995895,2074067,2329216,2306262,2047010,2108275,2502928,3084994,3030057,2702018,2743975,2176612,2065968,2118628,2404122,2409018,2128961,2186224,2558279,2885437,3422552,2703367,2532473,2151696,2085209,2182539,2478715,2450612,2170036,2175662,2450046,3061848,3610940,2966856,2476782,2131612],"mode":"lines","type":"scatter","marker":{"color":"rgba(31,119,180,1)","line":{"color":"rgba(31,119,180,1)"}},"error_y":{"color":"rgba(31,119,180,1)"},"error_x":{"color":"rgba(31,119,180,1)"},"line":{"color":"rgba(31,119,180,1)"},"xaxis":"x","yaxis":"y","frame":null}],"highlight":{"on":"plotly_click","persistent":false,"dynamic":false,"selectize":false,"opacityDim":0.20000000000000001,"selected":{"opacity":1},"debounce":0},"shinyEvents":["plotly_hover","plotly_click","plotly_selected","plotly_relayout","plotly_brushed","plotly_brushing","plotly_clickannotation","plotly_doubleclick","plotly_deselect","plotly_afterplot","plotly_sunburstclick"],"base_url":"https://plot.ly"},"evals":[],"jsHooks":[]}</script>
+</div>
+</div>
+<p>Next, we will calculate the ACF for the series</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb11"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>acf2 <span class="ot">&lt;-</span> ts2 <span class="sc">|&gt;</span> <span class="fu">ACF</span>(y, <span class="at">lag_max =</span> <span class="dv">60</span>)</span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>pi_upper <span class="ot">&lt;-</span> <span class="fu">qnorm</span>(<span class="dv">1</span> <span class="sc">-</span> alpha<span class="sc">/</span><span class="dv">2</span>)<span class="sc">/</span><span class="fu">sqrt</span>(<span class="fu">nrow</span>(ts2))</span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>pi_upper</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 0.1146982</code></pre>
+</div>
+</div>
+<p>And plot the ACF for the series:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>acf2 <span class="sc">|&gt;</span> <span class="fu">plot_ly</span>(<span class="at">x =</span> <span class="sc">~</span> lag, <span class="at">y =</span> <span class="sc">~</span> acf, <span class="at">type =</span> <span class="st">"bar"</span>, <span class="at">showlegend =</span> <span class="cn">FALSE</span>) <span class="sc">|&gt;</span></span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a><span class="fu">add_segments</span>(<span class="at">x =</span> <span class="sc">~</span> <span class="fu">min</span>(lag), <span class="at">xend =</span> <span class="sc">~</span> <span class="fu">max</span>(lag), <span class="at">y =</span> pi_upper, <span class="at">yend =</span> pi_upper, <span class="at">line =</span> <span class="fu">list</span>(<span class="at">color =</span> <span class="st">"black"</span>, <span class="at">dash =</span> <span class="st">"dash"</span>), <span class="at">name =</span> <span class="st">"Upper"</span>) <span class="sc">|&gt;</span></span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a><span class="fu">add_segments</span>(<span class="at">x =</span> <span class="sc">~</span> <span class="fu">min</span>(lag), <span class="at">xend =</span> <span class="sc">~</span> <span class="fu">max</span>(lag), <span class="at">y =</span> <span class="sc">-</span> pi_upper, <span class="at">yend =</span> <span class="sc">-</span> pi_upper, <span class="at">line =</span> <span class="fu">list</span>(<span class="at">color =</span> <span class="st">"black"</span>, <span class="at">dash =</span> <span class="st">"dash"</span>), <span class="at">name =</span> <span class="st">"Lower"</span>) <span class="sc">|&gt;</span></span>
+<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a><span class="fu">layout</span>(<span class="at">title =</span> <span class="st">"ACF Plot"</span>, <span class="at">xaxis =</span> <span class="fu">list</span>(<span class="at">title =</span> <span class="st">"Lags"</span>), <span class="at">yaxis =</span> <span class="fu">list</span>(<span class="at">title =</span> <span class="st">"ACF"</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div class="plotly html-widget html-fill-item" id="htmlwidget-f229601a6a21016ac81a" style="width:100%;height:464px;"></div>
+<script type="application/json" data-for="htmlwidget-f229601a6a21016ac81a">{"x":{"visdat":{"115c5978dc74":["function () ","plotlyVisDat"]},"cur_data":"115c5978dc74","attrs":{"115c5978dc74":{"x":{},"y":{},"showlegend":false,"alpha_stroke":1,"sizes":[10,100],"spans":[1,20],"type":"bar"},"115c5978dc74.1":{"x":{},"y":0.11469821660683349,"showlegend":false,"alpha_stroke":1,"sizes":[10,100],"spans":[1,20],"type":"scatter","xend":{},"yend":0.11469821660683349,"mode":"lines","line":{"color":"black","dash":"dash"},"name":"Upper","inherit":true},"115c5978dc74.2":{"x":{},"y":-0.11469821660683349,"showlegend":false,"alpha_stroke":1,"sizes":[10,100],"spans":[1,20],"type":"scatter","xend":{},"yend":-0.11469821660683349,"mode":"lines","line":{"color":"black","dash":"dash"},"name":"Lower","inherit":true}},"layout":{"margin":{"b":40,"l":60,"t":25,"r":10},"title":"ACF Plot","xaxis":{"domain":[0,1],"automargin":true,"title":"Lags"},"yaxis":{"domain":[0,1],"automargin":true,"title":"ACF"},"hovermode":"closest","showlegend":false},"source":"A","config":{"modeBarButtonsToAdd":["hoverclosest","hovercompare"],"showSendToCloud":false},"data":[{"x":[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60],"y":[0.80841728674847668,0.48273076740971776,0.18334158099033068,0.041055798228122893,0.028130979764168243,0.032248235964797783,0.018309002992786854,0.021842162297545275,0.15619072160690808,0.44469331098371889,0.74879359548652336,0.89579192701456689,0.73235855465745103,0.42676312438680225,0.14000836563304642,0.009254177540723869,0.0018746941541142644,0.0056490333397233835,-0.0058496359599770368,3.0037027594697087e-05,0.13212058099607824,0.41207876160360429,0.69594320553033551,0.82555033638068465,0.66987554253839332,0.37624882261669179,0.10439681123722415,-0.019229251392158794,-0.022135290916225733,-0.018275362565693599,-0.029968355031034725,-0.025354166976554258,0.10430776358771811,0.36931834492697863,0.64173983231489506,0.76724356376358793,0.6120267883382875,0.32537558676651701,0.069766011058592453,-0.047141980176966213,-0.052516812559804088,-0.048101108378677641,-0.057272247840345882,-0.050464254566768105,0.07910619563179587,0.33383908908295262,0.59221385072925503,0.71114685213081141,0.56165163078587133,0.28814490455729463,0.039100512811171356,-0.072307986242573632,-0.07581838184360945,-0.072798600831604429,-0.083114093695855679,-0.068132242949817401,0.052975923898480659,0.29650764360728349,0.53800062416358185,0.64412326257592822],"showlegend":false,"type":"bar","marker":{"color":"rgba(31,119,180,1)","line":{"color":"rgba(31,119,180,1)"}},"error_y":{"color":"rgba(31,119,180,1)"},"error_x":{"color":"rgba(31,119,180,1)"},"xaxis":"x","yaxis":"y","frame":null},{"x":[1,60],"y":[0.11469821660683349,0.11469821660683349],"showlegend":false,"type":"scatter","mode":"lines","line":{"color":"black","dash":"dash"},"name":"Upper","marker":{"color":"rgba(255,127,14,1)","line":{"color":"rgba(255,127,14,1)"}},"error_y":{"color":"rgba(255,127,14,1)"},"error_x":{"color":"rgba(255,127,14,1)"},"xaxis":"x","yaxis":"y","frame":null},{"x":[1,60],"y":[-0.11469821660683349,-0.11469821660683349],"showlegend":false,"type":"scatter","mode":"lines","line":{"color":"black","dash":"dash"},"name":"Lower","marker":{"color":"rgba(44,160,44,1)","line":{"color":"rgba(44,160,44,1)"}},"error_y":{"color":"rgba(44,160,44,1)"},"error_x":{"color":"rgba(44,160,44,1)"},"xaxis":"x","yaxis":"y","frame":null}],"highlight":{"on":"plotly_click","persistent":false,"dynamic":false,"selectize":false,"opacityDim":0.20000000000000001,"selected":{"opacity":1},"debounce":0},"shinyEvents":["plotly_hover","plotly_click","plotly_selected","plotly_relayout","plotly_brushed","plotly_brushing","plotly_clickannotation","plotly_doubleclick","plotly_deselect","plotly_afterplot","plotly_sunburstclick"],"base_url":"https://plot.ly"},"evals":[],"jsHooks":[]}</script>
+</div>
+</div>
+<p>We can learn from the above output that the series has strong seasonal patterns and the first seasonal lag is the most significant. Potential regression to consider is - regression the series with lags 1, 12, and 24, which is seasonal ARIMA model with AR order 1 and seasonal AR order of 1 or 2 (depends if using lags 12 and 24).</p>
+<p>A more elegant way to plot the ACF output would be to highlight the seasonal lags. Let’s functionalize the process and replot it:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb14"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>plot_acf <span class="ot">&lt;-</span> <span class="cf">function</span>(ts, var, lag_max, frequency){</span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>    a <span class="ot">&lt;-</span> ts <span class="sc">|&gt;</span> feasts<span class="sc">::</span><span class="fu">ACF</span>(<span class="sc">!!</span>rlang<span class="sc">::</span><span class="fu">sym</span>(var), <span class="at">lag_max =</span> lag_max)</span>
+<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a>    color <span class="ot">&lt;-</span> <span class="st">"#0072B5"</span></span>
+<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a>    pi_upper <span class="ot">&lt;-</span> <span class="fu">qnorm</span>(<span class="dv">1</span> <span class="sc">-</span> alpha<span class="sc">/</span><span class="dv">2</span>)<span class="sc">/</span><span class="fu">sqrt</span>(<span class="fu">nrow</span>(ts))</span>
+<span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a>pi_upper</span>
+<span id="cb14-6"><a href="#cb14-6" aria-hidden="true" tabindex="-1"></a>    p <span class="ot">&lt;-</span> plotly<span class="sc">::</span><span class="fu">plot_ly</span>(<span class="at">type =</span> <span class="st">"bar"</span>)</span>
+<span id="cb14-7"><a href="#cb14-7" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb14-8"><a href="#cb14-8" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span>(<span class="sc">!</span><span class="fu">is.null</span>(frequency)){</span>
+<span id="cb14-9"><a href="#cb14-9" aria-hidden="true" tabindex="-1"></a>        s <span class="ot">&lt;-</span> <span class="fu">seq</span>(<span class="at">from =</span> frequency, <span class="at">by =</span> frequency, <span class="at">to =</span> <span class="fu">nrow</span>(a))</span>
+<span id="cb14-10"><a href="#cb14-10" aria-hidden="true" tabindex="-1"></a>        a<span class="sc">$</span>seasonal <span class="ot">&lt;-</span> <span class="cn">NA</span></span>
+<span id="cb14-11"><a href="#cb14-11" aria-hidden="true" tabindex="-1"></a>        a<span class="sc">$</span>non_seasonal <span class="ot">&lt;-</span> a<span class="sc">$</span>acf</span>
+<span id="cb14-12"><a href="#cb14-12" aria-hidden="true" tabindex="-1"></a>        a<span class="sc">$</span>non_seasonal[s] <span class="ot">&lt;-</span> <span class="cn">NA</span></span>
+<span id="cb14-13"><a href="#cb14-13" aria-hidden="true" tabindex="-1"></a>        a<span class="sc">$</span>seasonal[s] <span class="ot">&lt;-</span> a<span class="sc">$</span>acf[s]</span>
+<span id="cb14-14"><a href="#cb14-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-15"><a href="#cb14-15" aria-hidden="true" tabindex="-1"></a>        p <span class="ot">&lt;-</span> p <span class="sc">|&gt;</span> plotly<span class="sc">::</span><span class="fu">add_trace</span>(<span class="at">x =</span> a<span class="sc">$</span>lag, <span class="at">y =</span> a<span class="sc">$</span>non_seasonal, <span class="at">name =</span> <span class="st">"Non-seasonal"</span>, <span class="at">marker =</span>  <span class="fu">list</span>(<span class="at">color =</span> color,</span>
+<span id="cb14-16"><a href="#cb14-16" aria-hidden="true" tabindex="-1"></a>                      <span class="at">line =</span> <span class="fu">list</span>(<span class="at">color =</span> <span class="st">"rgb(8,48,107)"</span>,</span>
+<span id="cb14-17"><a href="#cb14-17" aria-hidden="true" tabindex="-1"></a>                                  <span class="at">width =</span> <span class="fl">1.5</span>))) <span class="sc">|&gt;</span></span>
+<span id="cb14-18"><a href="#cb14-18" aria-hidden="true" tabindex="-1"></a>                                  plotly<span class="sc">::</span><span class="fu">add_trace</span>(<span class="at">x =</span> a<span class="sc">$</span>lag, <span class="at">y =</span> a<span class="sc">$</span>seasonal, <span class="at">name =</span> <span class="st">"Seasonal"</span>, <span class="at">marker =</span>  <span class="fu">list</span>(<span class="at">color =</span> <span class="st">"red"</span>, <span class="at">line =</span> <span class="fu">list</span>(<span class="at">color =</span> <span class="st">"rgb(8,48,107)"</span>,</span>
+<span id="cb14-19"><a href="#cb14-19" aria-hidden="true" tabindex="-1"></a>                                  <span class="at">width =</span> <span class="fl">1.5</span>)))</span>
+<span id="cb14-20"><a href="#cb14-20" aria-hidden="true" tabindex="-1"></a>    } <span class="cf">else</span> {</span>
+<span id="cb14-21"><a href="#cb14-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-22"><a href="#cb14-22" aria-hidden="true" tabindex="-1"></a>p <span class="ot">&lt;-</span> p <span class="sc">|&gt;</span> plotly<span class="sc">::</span><span class="fu">add_trace</span>(<span class="at">x =</span> a<span class="sc">$</span>lag, <span class="at">y =</span> a<span class="sc">$</span>acf, <span class="at">name =</span> <span class="st">"Lags"</span>, <span class="at">marker =</span>  <span class="fu">list</span>(<span class="at">color =</span> color,</span>
+<span id="cb14-23"><a href="#cb14-23" aria-hidden="true" tabindex="-1"></a>                      <span class="at">line =</span> <span class="fu">list</span>(<span class="at">color =</span> <span class="st">"rgb(8,48,107)"</span>,</span>
+<span id="cb14-24"><a href="#cb14-24" aria-hidden="true" tabindex="-1"></a>                                  <span class="at">width =</span> <span class="fl">1.5</span>)))</span>
+<span id="cb14-25"><a href="#cb14-25" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-26"><a href="#cb14-26" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb14-27"><a href="#cb14-27" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-28"><a href="#cb14-28" aria-hidden="true" tabindex="-1"></a>    p <span class="ot">&lt;-</span> p <span class="sc">|&gt;</span> plotly<span class="sc">::</span><span class="fu">layout</span>(<span class="st">"ACF Plot"</span>, <span class="at">yaxis =</span> <span class="fu">list</span>(<span class="at">title =</span> <span class="st">"ACF"</span>), <span class="at">xaxis =</span> <span class="fu">list</span>(<span class="at">title =</span> <span class="st">"Lags"</span>)) <span class="sc">|&gt;</span></span>
+<span id="cb14-29"><a href="#cb14-29" aria-hidden="true" tabindex="-1"></a>     plotly<span class="sc">::</span><span class="fu">add_segments</span>(<span class="at">x =</span> <span class="sc">~</span> <span class="fu">min</span>(a<span class="sc">$</span>lag), <span class="at">xend =</span> <span class="sc">~</span> <span class="fu">max</span>(a<span class="sc">$</span>lag), <span class="at">y =</span> pi_upper, <span class="at">yend =</span> pi_upper, <span class="at">line =</span> <span class="fu">list</span>(<span class="at">color =</span> <span class="st">"black"</span>, <span class="at">dash =</span> <span class="st">"dash"</span>), <span class="at">name =</span> <span class="st">"95% CI"</span>, <span class="at">showlegend =</span> <span class="cn">TRUE</span>, <span class="at">legendgroup =</span> <span class="st">"ci"</span>) <span class="sc">|&gt;</span></span>
+<span id="cb14-30"><a href="#cb14-30" aria-hidden="true" tabindex="-1"></a>    plotly<span class="sc">::</span><span class="fu">add_segments</span>(<span class="at">x =</span> <span class="sc">~</span> <span class="fu">min</span>(a<span class="sc">$</span>lag), <span class="at">xend =</span> <span class="sc">~</span> <span class="fu">max</span>(a<span class="sc">$</span>lag), <span class="at">y =</span> <span class="sc">-</span> pi_upper, <span class="at">yend =</span> <span class="sc">-</span> pi_upper, <span class="at">line =</span> <span class="fu">list</span>(<span class="at">color =</span> <span class="st">"black"</span>, <span class="at">dash =</span> <span class="st">"dash"</span>), <span class="at">name =</span> <span class="st">"95% CI"</span>, <span class="at">showlegend =</span> <span class="cn">FALSE</span>, <span class="at">legendgroup =</span> <span class="st">"ci"</span>) </span>
+<span id="cb14-31"><a href="#cb14-31" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb14-32"><a href="#cb14-32" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb14-33"><a href="#cb14-33" aria-hidden="true" tabindex="-1"></a>    <span class="fu">return</span>(p)</span>
+<span id="cb14-34"><a href="#cb14-34" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-35"><a href="#cb14-35" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb14-36"><a href="#cb14-36" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-37"><a href="#cb14-37" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-38"><a href="#cb14-38" aria-hidden="true" tabindex="-1"></a><span class="fu">plot_acf</span>(<span class="at">ts =</span> ts2, <span class="at">var =</span> <span class="st">"y"</span>, <span class="at">lag_max =</span> <span class="dv">60</span>, <span class="at">frequency =</span> <span class="dv">12</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div class="plotly html-widget html-fill-item" id="htmlwidget-f9d8cf5afff33231c125" style="width:100%;height:464px;"></div>
+<script type="application/json" data-for="htmlwidget-f9d8cf5afff33231c125">{"x":{"visdat":{"115c53ea83cf9":["function () ","plotlyVisDat"]},"cur_data":"115c53ea83cf9","attrs":{"115c53ea83cf9":{"alpha_stroke":1,"sizes":[10,100],"spans":[1,20],"type":"bar"},"115c53ea83cf9.1":{"alpha_stroke":1,"sizes":[10,100],"spans":[1,20],"type":"bar","x":[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60],"y":[0.80841728674847668,0.48273076740971776,0.18334158099033068,0.041055798228122893,0.028130979764168243,0.032248235964797783,0.018309002992786854,0.021842162297545275,0.15619072160690808,0.44469331098371889,0.74879359548652336,null,0.73235855465745103,0.42676312438680225,0.14000836563304642,0.009254177540723869,0.0018746941541142644,0.0056490333397233835,-0.0058496359599770368,3.0037027594697087e-05,0.13212058099607824,0.41207876160360429,0.69594320553033551,null,0.66987554253839332,0.37624882261669179,0.10439681123722415,-0.019229251392158794,-0.022135290916225733,-0.018275362565693599,-0.029968355031034725,-0.025354166976554258,0.10430776358771811,0.36931834492697863,0.64173983231489506,null,0.6120267883382875,0.32537558676651701,0.069766011058592453,-0.047141980176966213,-0.052516812559804088,-0.048101108378677641,-0.057272247840345882,-0.050464254566768105,0.07910619563179587,0.33383908908295262,0.59221385072925503,null,0.56165163078587133,0.28814490455729463,0.039100512811171356,-0.072307986242573632,-0.07581838184360945,-0.072798600831604429,-0.083114093695855679,-0.068132242949817401,0.052975923898480659,0.29650764360728349,0.53800062416358185,null],"name":"Non-seasonal","marker":{"color":"#0072B5","line":{"color":"rgb(8,48,107)","width":1.5}},"inherit":true},"115c53ea83cf9.2":{"alpha_stroke":1,"sizes":[10,100],"spans":[1,20],"type":"bar","x":[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60],"y":[null,null,null,null,null,null,null,null,null,null,null,0.89579192701456689,null,null,null,null,null,null,null,null,null,null,null,0.82555033638068465,null,null,null,null,null,null,null,null,null,null,null,0.76724356376358793,null,null,null,null,null,null,null,null,null,null,null,0.71114685213081141,null,null,null,null,null,null,null,null,null,null,null,0.64412326257592822],"name":"Seasonal","marker":{"color":"red","line":{"color":"rgb(8,48,107)","width":1.5}},"inherit":true},"115c53ea83cf9.3":{"alpha_stroke":1,"sizes":[10,100],"spans":[1,20],"type":"scatter","x":{},"y":0.11469821660683349,"xend":{},"yend":0.11469821660683349,"mode":"lines","line":{"color":"black","dash":"dash"},"name":"95% CI","showlegend":true,"legendgroup":"ci","inherit":true},"115c53ea83cf9.4":{"alpha_stroke":1,"sizes":[10,100],"spans":[1,20],"type":"scatter","x":{},"y":-0.11469821660683349,"xend":{},"yend":-0.11469821660683349,"mode":"lines","line":{"color":"black","dash":"dash"},"name":"95% CI","showlegend":false,"legendgroup":"ci","inherit":true}},"layout":{"margin":{"b":40,"l":60,"t":25,"r":10},"yaxis":{"domain":[0,1],"automargin":true,"title":"ACF"},"xaxis":{"domain":[0,1],"automargin":true,"title":"Lags"},"hovermode":"closest","showlegend":true},"source":"A","config":{"modeBarButtonsToAdd":["hoverclosest","hovercompare"],"showSendToCloud":false},"data":[{"type":"bar","marker":{"color":"rgba(31,119,180,1)","line":{"color":"rgba(31,119,180,1)"}},"error_y":{"color":"rgba(31,119,180,1)"},"error_x":{"color":"rgba(31,119,180,1)"},"xaxis":"x","yaxis":"y","frame":null},{"type":"bar","x":[1,2,3,4,5,6,7,8,9,10,11,13,14,15,16,17,18,19,20,21,22,23,25,26,27,28,29,30,31,32,33,34,35,37,38,39,40,41,42,43,44,45,46,47,49,50,51,52,53,54,55,56,57,58,59],"y":[0.80841728674847668,0.48273076740971776,0.18334158099033068,0.041055798228122893,0.028130979764168243,0.032248235964797783,0.018309002992786854,0.021842162297545275,0.15619072160690808,0.44469331098371889,0.74879359548652336,0.73235855465745103,0.42676312438680225,0.14000836563304642,0.009254177540723869,0.0018746941541142644,0.0056490333397233835,-0.0058496359599770368,3.0037027594697087e-05,0.13212058099607824,0.41207876160360429,0.69594320553033551,0.66987554253839332,0.37624882261669179,0.10439681123722415,-0.019229251392158794,-0.022135290916225733,-0.018275362565693599,-0.029968355031034725,-0.025354166976554258,0.10430776358771811,0.36931834492697863,0.64173983231489506,0.6120267883382875,0.32537558676651701,0.069766011058592453,-0.047141980176966213,-0.052516812559804088,-0.048101108378677641,-0.057272247840345882,-0.050464254566768105,0.07910619563179587,0.33383908908295262,0.59221385072925503,0.56165163078587133,0.28814490455729463,0.039100512811171356,-0.072307986242573632,-0.07581838184360945,-0.072798600831604429,-0.083114093695855679,-0.068132242949817401,0.052975923898480659,0.29650764360728349,0.53800062416358185],"name":"Non-seasonal","marker":{"color":"#0072B5","line":{"color":"rgb(8,48,107)","width":1.5}},"error_y":{"color":"rgba(255,127,14,1)"},"error_x":{"color":"rgba(255,127,14,1)"},"xaxis":"x","yaxis":"y","frame":null},{"type":"bar","x":[12,24,36,48,60],"y":[0.89579192701456689,0.82555033638068465,0.76724356376358793,0.71114685213081141,0.64412326257592822],"name":"Seasonal","marker":{"color":"red","line":{"color":"rgb(8,48,107)","width":1.5}},"error_y":{"color":"rgba(44,160,44,1)"},"error_x":{"color":"rgba(44,160,44,1)"},"xaxis":"x","yaxis":"y","frame":null},{"type":"scatter","x":[1,60],"y":[0.11469821660683349,0.11469821660683349],"mode":"lines","line":{"color":"black","dash":"dash"},"name":"95% CI","showlegend":true,"legendgroup":"ci","marker":{"color":"rgba(214,39,40,1)","line":{"color":"rgba(214,39,40,1)"}},"error_y":{"color":"rgba(214,39,40,1)"},"error_x":{"color":"rgba(214,39,40,1)"},"xaxis":"x","yaxis":"y","frame":null},{"type":"scatter","x":[1,60],"y":[-0.11469821660683349,-0.11469821660683349],"mode":"lines","line":{"color":"black","dash":"dash"},"name":"95% CI","showlegend":false,"legendgroup":"ci","marker":{"color":"rgba(148,103,189,1)","line":{"color":"rgba(148,103,189,1)"}},"error_y":{"color":"rgba(148,103,189,1)"},"error_x":{"color":"rgba(148,103,189,1)"},"xaxis":"x","yaxis":"y","frame":null}],"highlight":{"on":"plotly_click","persistent":false,"dynamic":false,"selectize":false,"opacityDim":0.20000000000000001,"selected":{"opacity":1},"debounce":0},"shinyEvents":["plotly_hover","plotly_click","plotly_selected","plotly_relayout","plotly_brushed","plotly_brushing","plotly_clickannotation","plotly_doubleclick","plotly_deselect","plotly_afterplot","plotly_sunburstclick"],"base_url":"https://plot.ly"},"evals":[],"jsHooks":[]}</script>
+</div>
+</div>
+</section>
+</section>
+<section id="lags-plots" class="level2">
+<h2 class="anchored" data-anchor-id="lags-plots">Lags Plots</h2>
+<p>Another common way to visualize correlation of the series with its lags is using lags plots. The following code generates a plot for each lag:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb15"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a>plot_lag <span class="ot">&lt;-</span> <span class="cf">function</span>(ts, var, lag){</span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a>  d <span class="ot">&lt;-</span> ts <span class="sc">|&gt;</span> </span>
+<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a>  dplyr<span class="sc">::</span><span class="fu">mutate</span>(<span class="at">lag =</span> dplyr<span class="sc">::</span><span class="fu">lag</span>(<span class="at">x=</span> <span class="sc">!!</span>rlang<span class="sc">::</span><span class="fu">sym</span>(var), <span class="at">n =</span> lag))</span>
+<span id="cb15-5"><a href="#cb15-5" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb15-6"><a href="#cb15-6" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Create the regression formula</span></span>
+<span id="cb15-7"><a href="#cb15-7" aria-hidden="true" tabindex="-1"></a>  formula <span class="ot">&lt;-</span> <span class="fu">as.formula</span>(<span class="fu">paste</span>(var, <span class="st">"~ lag"</span> ))</span>
+<span id="cb15-8"><a href="#cb15-8" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb15-9"><a href="#cb15-9" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Fit the linear model</span></span>
+<span id="cb15-10"><a href="#cb15-10" aria-hidden="true" tabindex="-1"></a>  model <span class="ot">&lt;-</span> <span class="fu">lm</span>(formula, <span class="at">data =</span> d)</span>
+<span id="cb15-11"><a href="#cb15-11" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb15-12"><a href="#cb15-12" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Extract model coefficients</span></span>
+<span id="cb15-13"><a href="#cb15-13" aria-hidden="true" tabindex="-1"></a>  intercept <span class="ot">&lt;-</span> <span class="fu">coef</span>(model)[<span class="dv">1</span>]</span>
+<span id="cb15-14"><a href="#cb15-14" aria-hidden="true" tabindex="-1"></a>  slope <span class="ot">&lt;-</span> <span class="fu">coef</span>(model)[<span class="dv">2</span>]</span>
+<span id="cb15-15"><a href="#cb15-15" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb15-16"><a href="#cb15-16" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Format regression formula text</span></span>
+<span id="cb15-17"><a href="#cb15-17" aria-hidden="true" tabindex="-1"></a>  reg_formula <span class="ot">&lt;-</span> <span class="fu">paste0</span>(<span class="st">"y = "</span>, <span class="fu">round</span>(intercept, <span class="dv">2</span>),</span>
+<span id="cb15-18"><a href="#cb15-18" aria-hidden="true" tabindex="-1"></a>                        <span class="fu">ifelse</span>(slope <span class="sc">&lt;</span> <span class="dv">0</span>, <span class="st">" - "</span>, <span class="st">" + "</span>),</span>
+<span id="cb15-19"><a href="#cb15-19" aria-hidden="true" tabindex="-1"></a>                        <span class="fu">abs</span>(<span class="fu">round</span>(slope, <span class="dv">2</span>)), <span class="fu">paste</span>(<span class="st">"*lag"</span>, lag, <span class="at">sep =</span> <span class="st">""</span>))</span>
+<span id="cb15-20"><a href="#cb15-20" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb15-21"><a href="#cb15-21" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Get adjusted R-squared</span></span>
+<span id="cb15-22"><a href="#cb15-22" aria-hidden="true" tabindex="-1"></a>  adj_r2 <span class="ot">&lt;-</span> <span class="fu">summary</span>(model)<span class="sc">$</span>adj.r.squared</span>
+<span id="cb15-23"><a href="#cb15-23" aria-hidden="true" tabindex="-1"></a>  adj_r2_label <span class="ot">&lt;-</span> <span class="fu">paste0</span>(<span class="st">"Adjusted R² = "</span>, <span class="fu">round</span>(adj_r2, <span class="dv">3</span>))</span>
+<span id="cb15-24"><a href="#cb15-24" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb15-25"><a href="#cb15-25" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Add predicted values to data</span></span>
+<span id="cb15-26"><a href="#cb15-26" aria-hidden="true" tabindex="-1"></a>  d<span class="sc">$</span>predicted <span class="ot">&lt;-</span> <span class="fu">predict</span>(model, <span class="at">newdata =</span> d)</span>
+<span id="cb15-27"><a href="#cb15-27" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb15-28"><a href="#cb15-28" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Create plot</span></span>
+<span id="cb15-29"><a href="#cb15-29" aria-hidden="true" tabindex="-1"></a>  p <span class="ot">&lt;-</span> <span class="fu">plot_ly</span>(d, <span class="at">x =</span> <span class="sc">~</span> lag, <span class="at">y =</span> <span class="sc">~</span><span class="fu">get</span>(var), <span class="at">type =</span> <span class="st">'scatter'</span>, <span class="at">mode =</span> <span class="st">'markers'</span>,</span>
+<span id="cb15-30"><a href="#cb15-30" aria-hidden="true" tabindex="-1"></a>               <span class="at">name =</span> <span class="st">'Actual'</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb15-31"><a href="#cb15-31" aria-hidden="true" tabindex="-1"></a>    <span class="fu">add_lines</span>(<span class="at">x =</span> <span class="sc">~</span> lag, <span class="at">y =</span> <span class="sc">~</span>predicted, <span class="at">name =</span> <span class="st">'Regression Fitted Line'</span>,</span>
+<span id="cb15-32"><a href="#cb15-32" aria-hidden="true" tabindex="-1"></a>              <span class="at">line =</span> <span class="fu">list</span>(<span class="at">color =</span> <span class="st">"red"</span>, <span class="at">dash =</span> <span class="st">"dash"</span>)) <span class="sc">%&gt;%</span></span>
+<span id="cb15-33"><a href="#cb15-33" aria-hidden="true" tabindex="-1"></a>    <span class="fu">layout</span>(<span class="at">title =</span> <span class="fu">paste</span>(var, <span class="st">"vs Lag"</span>, lag, <span class="at">sep =</span> <span class="st">" "</span>),</span>
+<span id="cb15-34"><a href="#cb15-34" aria-hidden="true" tabindex="-1"></a>           <span class="at">xaxis =</span> <span class="fu">list</span>(<span class="at">title =</span> <span class="fu">paste</span>(<span class="st">"Lag"</span>, lag, <span class="at">sep =</span> <span class="st">" "</span>)),</span>
+<span id="cb15-35"><a href="#cb15-35" aria-hidden="true" tabindex="-1"></a>           <span class="at">yaxis =</span> <span class="fu">list</span>(<span class="at">title =</span> var),</span>
+<span id="cb15-36"><a href="#cb15-36" aria-hidden="true" tabindex="-1"></a>           <span class="at">annotations =</span> <span class="fu">list</span>(</span>
+<span id="cb15-37"><a href="#cb15-37" aria-hidden="true" tabindex="-1"></a>             <span class="fu">list</span>(<span class="at">x =</span> <span class="fl">0.05</span>, <span class="at">y =</span> <span class="fl">0.95</span>, <span class="at">xref =</span> <span class="st">"paper"</span>, <span class="at">yref =</span> <span class="st">"paper"</span>,</span>
+<span id="cb15-38"><a href="#cb15-38" aria-hidden="true" tabindex="-1"></a>                  <span class="at">text =</span> reg_formula,</span>
+<span id="cb15-39"><a href="#cb15-39" aria-hidden="true" tabindex="-1"></a>                  <span class="at">showarrow =</span> <span class="cn">FALSE</span>,</span>
+<span id="cb15-40"><a href="#cb15-40" aria-hidden="true" tabindex="-1"></a>                  <span class="at">font =</span> <span class="fu">list</span>(<span class="at">size =</span> <span class="dv">12</span>)),</span>
+<span id="cb15-41"><a href="#cb15-41" aria-hidden="true" tabindex="-1"></a>             <span class="fu">list</span>(<span class="at">x =</span> <span class="fl">0.05</span>, <span class="at">y =</span> <span class="fl">0.88</span>, <span class="at">xref =</span> <span class="st">"paper"</span>, <span class="at">yref =</span> <span class="st">"paper"</span>,</span>
+<span id="cb15-42"><a href="#cb15-42" aria-hidden="true" tabindex="-1"></a>                  <span class="at">text =</span> adj_r2_label,</span>
+<span id="cb15-43"><a href="#cb15-43" aria-hidden="true" tabindex="-1"></a>                  <span class="at">showarrow =</span> <span class="cn">FALSE</span>,</span>
+<span id="cb15-44"><a href="#cb15-44" aria-hidden="true" tabindex="-1"></a>                  <span class="at">font =</span> <span class="fu">list</span>(<span class="at">size =</span> <span class="dv">12</span>))</span>
+<span id="cb15-45"><a href="#cb15-45" aria-hidden="true" tabindex="-1"></a>           ))</span>
+<span id="cb15-46"><a href="#cb15-46" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb15-47"><a href="#cb15-47" aria-hidden="true" tabindex="-1"></a>  <span class="fu">return</span>(p)</span>
+<span id="cb15-48"><a href="#cb15-48" aria-hidden="true" tabindex="-1"></a>}</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>Let’s plot the relationship between the total number of consumers of natural gas in the US with its first and 10th lags:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb16"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a><span class="fu">plot_lag</span>(<span class="at">ts =</span> ts1, <span class="at">var =</span> <span class="st">"y"</span>, <span class="at">lag =</span> <span class="dv">1</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div class="plotly html-widget html-fill-item" id="htmlwidget-81bc5f973d49bc0f071b" style="width:100%;height:464px;"></div>
+<script type="application/json" data-for="htmlwidget-81bc5f973d49bc0f071b">{"x":{"visdat":{"115c53ce35853":["function () ","plotlyVisDat"]},"cur_data":"115c53ce35853","attrs":{"115c53ce35853":{"x":{},"y":{},"mode":"markers","name":"Actual","alpha_stroke":1,"sizes":[10,100],"spans":[1,20],"type":"scatter"},"115c53ce35853.1":{"x":{},"y":{},"mode":"lines","name":"Regression Fitted Line","alpha_stroke":1,"sizes":[10,100],"spans":[1,20],"type":"scatter","line":{"color":"red","dash":"dash"},"inherit":true}},"layout":{"margin":{"b":40,"l":60,"t":25,"r":10},"title":"y vs Lag 1","xaxis":{"domain":[0,1],"automargin":true,"title":"Lag 1"},"yaxis":{"domain":[0,1],"automargin":true,"title":"y"},"annotations":[{"x":0.050000000000000003,"y":0.94999999999999996,"xref":"paper","yref":"paper","text":"y = 386895.34 + 0.97*lag1","showarrow":false,"font":{"size":12}},{"x":0.050000000000000003,"y":0.88,"xref":"paper","yref":"paper","text":"Adjusted R² = 0.997","showarrow":false,"font":{"size":12}}],"hovermode":"closest","showlegend":true},"source":"A","config":{"modeBarButtonsToAdd":["hoverclosest","hovercompare"],"showSendToCloud":false},"data":[{"x":[7904858,8113034,8313776,8497848,8634774,8680613,8726187,8790733,8865541,8969308,9060473,9181928,9331206,9370797,9603122,9726642,9803311,9957412,10124433,10329224,10439220,10515162,10510950,10542584,10625190,10681916,10754908,10781720,10969597,10916368,11004853,11025789,11112094,11186350,11232552,11280329],"y":[8113034,8313776,8497848,8634774,8680613,8726187,8790733,8865541,8969308,9060473,9181928,9331206,9370797,9603122,9726642,9803311,9957412,10124433,10329224,10439220,10515162,10510950,10542584,10625190,10681916,10754908,10781720,10969597,10916368,11004853,11025789,11112094,11186350,11232552,11280329,11355756],"mode":"markers","name":"Actual","type":"scatter","marker":{"color":"rgba(31,119,180,1)","line":{"color":"rgba(31,119,180,1)"}},"error_y":{"color":"rgba(31,119,180,1)"},"error_x":{"color":"rgba(31,119,180,1)"},"line":{"color":"rgba(31,119,180,1)"},"xaxis":"x","yaxis":"y","frame":null},{"x":[7904858,8113034,8313776,8497848,8634774,8680613,8726187,8790733,8865541,8969308,9060473,9181928,9331206,9370797,9603122,9726642,9803311,9957412,10124433,10329224,10439220,10510950,10515162,10542584,10625190,10681916,10754908,10781720,10916368,10969597,11004853,11025789,11112094,11186350,11232552,11280329],"y":[8058822.9748343956,8260864.7074849168,8455691.4958550017,8634339.4947234914,8767230.7323536966,8811719.0066166613,8855950.0895648152,8918594.1295870114,8991197.7819586601,9091907.1071063541,9180385.772068141,9298261.8895796165,9443141.1540798694,9481565.5365128443,9707044.6769422516,9826924.9456427377,9901334.7604176532,10050894.906847492,10212994.343041014,10411750.82059478,10518505.597440463,10588121.948427232,10592209.834532855,10618823.797682989,10698995.668442966,10754050.138345039,10824891.302310273,10850913.24016971,10981593.603025788,11033254.1181056,11067471.238841549,11087790.323244991,11171552.196546445,11243620.114556672,11288460.692394268,11334829.860121787],"mode":"lines","name":"Regression Fitted Line","type":"scatter","line":{"color":"red","dash":"dash"},"marker":{"color":"rgba(255,127,14,1)","line":{"color":"rgba(255,127,14,1)"}},"error_y":{"color":"rgba(255,127,14,1)"},"error_x":{"color":"rgba(255,127,14,1)"},"xaxis":"x","yaxis":"y","frame":null}],"highlight":{"on":"plotly_click","persistent":false,"dynamic":false,"selectize":false,"opacityDim":0.20000000000000001,"selected":{"opacity":1},"debounce":0},"shinyEvents":["plotly_hover","plotly_click","plotly_selected","plotly_relayout","plotly_brushed","plotly_brushing","plotly_clickannotation","plotly_doubleclick","plotly_deselect","plotly_afterplot","plotly_sunburstclick"],"base_url":"https://plot.ly"},"evals":[],"jsHooks":[]}</script>
+</div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb17"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a><span class="fu">plot_lag</span>(<span class="at">ts =</span> ts1, <span class="at">var =</span> <span class="st">"y"</span>, <span class="at">lag =</span> <span class="dv">10</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div class="plotly html-widget html-fill-item" id="htmlwidget-32e38c1d5e3bc7fe4451" style="width:100%;height:464px;"></div>
+<script type="application/json" data-for="htmlwidget-32e38c1d5e3bc7fe4451">{"x":{"visdat":{"115c5194d377c":["function () ","plotlyVisDat"]},"cur_data":"115c5194d377c","attrs":{"115c5194d377c":{"x":{},"y":{},"mode":"markers","name":"Actual","alpha_stroke":1,"sizes":[10,100],"spans":[1,20],"type":"scatter"},"115c5194d377c.1":{"x":{},"y":{},"mode":"lines","name":"Regression Fitted Line","alpha_stroke":1,"sizes":[10,100],"spans":[1,20],"type":"scatter","line":{"color":"red","dash":"dash"},"inherit":true}},"layout":{"margin":{"b":40,"l":60,"t":25,"r":10},"title":"y vs Lag 10","xaxis":{"domain":[0,1],"automargin":true,"title":"Lag 10"},"yaxis":{"domain":[0,1],"automargin":true,"title":"y"},"annotations":[{"x":0.050000000000000003,"y":0.94999999999999996,"xref":"paper","yref":"paper","text":"y = 3188677.6 + 0.76*lag10","showarrow":false,"font":{"size":12}},{"x":0.050000000000000003,"y":0.88,"xref":"paper","yref":"paper","text":"Adjusted R² = 0.935","showarrow":false,"font":{"size":12}}],"hovermode":"closest","showlegend":true},"source":"A","config":{"modeBarButtonsToAdd":["hoverclosest","hovercompare"],"showSendToCloud":false},"data":[{"x":[7904858,8113034,8313776,8497848,8634774,8680613,8726187,8790733,8865541,8969308,9060473,9181928,9331206,9370797,9603122,9726642,9803311,9957412,10124433,10329224,10439220,10515162,10510950,10542584,10625190,10681916,10754908],"y":[9060473,9181928,9331206,9370797,9603122,9726642,9803311,9957412,10124433,10329224,10439220,10515162,10510950,10542584,10625190,10681916,10754908,10781720,10969597,10916368,11004853,11025789,11112094,11186350,11232552,11280329,11355756],"mode":"markers","name":"Actual","type":"scatter","marker":{"color":"rgba(31,119,180,1)","line":{"color":"rgba(31,119,180,1)"}},"error_y":{"color":"rgba(31,119,180,1)"},"error_x":{"color":"rgba(31,119,180,1)"},"line":{"color":"rgba(31,119,180,1)"},"xaxis":"x","yaxis":"y","frame":null},{"x":[7904858,8113034,8313776,8497848,8634774,8680613,8726187,8790733,8865541,8969308,9060473,9181928,9331206,9370797,9603122,9726642,9803311,9957412,10124433,10329224,10439220,10510950,10515162,10542584,10625190,10681916,10754908],"y":[9218834.3011304792,9377639.6712758001,9530774.0749232527,9671191.9045164324,9775644.7910764497,9810612.6997791417,9845378.4553849883,9894616.8470410872,9951683.5220172182,10030841.334848043,10100385.81437161,10193036.774285337,10306912.28368389,10337113.956352321,10514341.194934156,10608567.423319513,10667053.747024799,10784608.442785906,10912019.055570479,11068242.205969328,11152151.760838788,11206870.408524035,11210083.498501036,11231002.148394035,11294017.464310491,11337290.432505017,11392971.786636364],"mode":"lines","name":"Regression Fitted Line","type":"scatter","line":{"color":"red","dash":"dash"},"marker":{"color":"rgba(255,127,14,1)","line":{"color":"rgba(255,127,14,1)"}},"error_y":{"color":"rgba(255,127,14,1)"},"error_x":{"color":"rgba(255,127,14,1)"},"xaxis":"x","yaxis":"y","frame":null}],"highlight":{"on":"plotly_click","persistent":false,"dynamic":false,"selectize":false,"opacityDim":0.20000000000000001,"selected":{"opacity":1},"debounce":0},"shinyEvents":["plotly_hover","plotly_click","plotly_selected","plotly_relayout","plotly_brushed","plotly_brushing","plotly_clickannotation","plotly_doubleclick","plotly_deselect","plotly_afterplot","plotly_sunburstclick"],"base_url":"https://plot.ly"},"evals":[],"jsHooks":[]}</script>
+</div>
+</div>
+<p>Likewise, we will plot the relationship between the demand for natural gas in the US with its first and seasonal lag (12):</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb18"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a><span class="fu">plot_lag</span>(<span class="at">ts =</span> ts2, <span class="at">var =</span> <span class="st">"y"</span>, <span class="at">lag =</span> <span class="dv">1</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div class="plotly html-widget html-fill-item" id="htmlwidget-5a938d791bc2617e086d" style="width:100%;height:464px;"></div>
+<script type="application/json" data-for="htmlwidget-5a938d791bc2617e086d">{"x":{"visdat":{"115c55b1917bd":["function () ","plotlyVisDat"]},"cur_data":"115c55b1917bd","attrs":{"115c55b1917bd":{"x":{},"y":{},"mode":"markers","name":"Actual","alpha_stroke":1,"sizes":[10,100],"spans":[1,20],"type":"scatter"},"115c55b1917bd.1":{"x":{},"y":{},"mode":"lines","name":"Regression Fitted Line","alpha_stroke":1,"sizes":[10,100],"spans":[1,20],"type":"scatter","line":{"color":"red","dash":"dash"},"inherit":true}},"layout":{"margin":{"b":40,"l":60,"t":25,"r":10},"title":"y vs Lag 1","xaxis":{"domain":[0,1],"automargin":true,"title":"Lag 1"},"yaxis":{"domain":[0,1],"automargin":true,"title":"y"},"annotations":[{"x":0.050000000000000003,"y":0.94999999999999996,"xref":"paper","yref":"paper","text":"y = 384833.37 + 0.81*lag1","showarrow":false,"font":{"size":12}},{"x":0.050000000000000003,"y":0.88,"xref":"paper","yref":"paper","text":"Adjusted R² = 0.655","showarrow":false,"font":{"size":12}}],"hovermode":"closest","showlegend":true},"source":"A","config":{"modeBarButtonsToAdd":["hoverclosest","hovercompare"],"showSendToCloud":false},"data":[{"x":[2505011,2156873,2086568,1663832,1385163,1313119,1459919,1528483,1360871,1507428,1561970,1965873,2319273,2090786,2096915,1734549,1470504,1453967,1602849,1582079,1408599,1506936,1766395,2214167,2532736,2346489,2041522,1603853,1379497,1240196,1464704,1512522,1299128,1417234,1616154,2108690,2512844,2358946,1952607,1609746,1441557,1356266,1452339,1445892,1357712,1426546,1647979,2176020,2396713,2094357,2048169,1585188,1386917,1400018,1547608,1555887,1301829,1302758,1529693,2169754,2010926,1999359,1972165,1543302,1390353,1415134,1615241,1607830,1328565,1501925,1622364,1965718,2306943,2403778,1967388,1662412,1414428,1413254,1513157,1741755,1446674,1479110,1681149,2225994,2554281,2335770,2109623,1672724,1430242,1459015,1556011,1531863,1329726,1488645,1714971,2226478,2538368,2162215,1996245,1585512,1353150,1378772,1503321,1578354,1427135,1510867,1619852,2310875,2624217,2312746,1974222,1540128,1465089,1500962,1668244,1718550,1485061,1506234,1809151,2522442,2699039,2285465,2056105,1665278,1509295,1503845,1728010,1727907,1500242,1579772,1860159,2351937,2557465,2319221,1949890,1784460,1703507,1702557,1891318,1832775,1640347,1727393,1989660,2312832,2661816,2371983,2316191,1783603,1572373,1567216,1738157,1739436,1588718,1680814,2118508,2700111,2997145,2556038,2365293,1786764,1636202,1576508,1701744,1751644,1635485,1730740,2167984,2475535,2903574,2730693,2392542,1826933,1678755,1723906,1882675,1867936,1723960,1804380,2064029,2389902,2880714,2459545,2164467,1903501,1785885,1825125,2001036,2023229,1774412,1748897,1979957,2665391,2708217,2161185,2324198,1753578,1710548,1731387,1950510,1904112,1737701,1838965,2155805,2858509,3107734,2507085,2576005,2148089,1855856,1867447,2139037,2100482,1949898,2069201,2488282,2759042,3161732,2783640,2680848,1994279,1912779,1902995,2162450,2197474,1982049,2072599,2535754,2904407,3052335,2809540,2475096,2035122,1861283,1917555,2234989,2173203,1938029,2093493,2215375,2924939,3056278,2850394,2387023,2036708,1882870,2008918,2171329,2188822,1906377,2015381,2427617,2731775,3287895,2793006,2516726,2114010,1995895,2074067,2329216,2306262,2047010,2108275,2502928,3084994,3030057,2702018,2743975,2176612,2065968,2118628,2404122,2409018,2128961,2186224,2558279,2885437,3422552,2703367,2532473,2151696,2085209,2182539,2478715,2450612,2170036,2175662,2450046,3061848,3610940,2966856,2476782],"y":[2156873,2086568,1663832,1385163,1313119,1459919,1528483,1360871,1507428,1561970,1965873,2319273,2090786,2096915,1734549,1470504,1453967,1602849,1582079,1408599,1506936,1766395,2214167,2532736,2346489,2041522,1603853,1379497,1240196,1464704,1512522,1299128,1417234,1616154,2108690,2512844,2358946,1952607,1609746,1441557,1356266,1452339,1445892,1357712,1426546,1647979,2176020,2396713,2094357,2048169,1585188,1386917,1400018,1547608,1555887,1301829,1302758,1529693,2169754,2010926,1999359,1972165,1543302,1390353,1415134,1615241,1607830,1328565,1501925,1622364,1965718,2306943,2403778,1967388,1662412,1414428,1413254,1513157,1741755,1446674,1479110,1681149,2225994,2554281,2335770,2109623,1672724,1430242,1459015,1556011,1531863,1329726,1488645,1714971,2226478,2538368,2162215,1996245,1585512,1353150,1378772,1503321,1578354,1427135,1510867,1619852,2310875,2624217,2312746,1974222,1540128,1465089,1500962,1668244,1718550,1485061,1506234,1809151,2522442,2699039,2285465,2056105,1665278,1509295,1503845,1728010,1727907,1500242,1579772,1860159,2351937,2557465,2319221,1949890,1784460,1703507,1702557,1891318,1832775,1640347,1727393,1989660,2312832,2661816,2371983,2316191,1783603,1572373,1567216,1738157,1739436,1588718,1680814,2118508,2700111,2997145,2556038,2365293,1786764,1636202,1576508,1701744,1751644,1635485,1730740,2167984,2475535,2903574,2730693,2392542,1826933,1678755,1723906,1882675,1867936,1723960,1804380,2064029,2389902,2880714,2459545,2164467,1903501,1785885,1825125,2001036,2023229,1774412,1748897,1979957,2665391,2708217,2161185,2324198,1753578,1710548,1731387,1950510,1904112,1737701,1838965,2155805,2858509,3107734,2507085,2576005,2148089,1855856,1867447,2139037,2100482,1949898,2069201,2488282,2759042,3161732,2783640,2680848,1994279,1912779,1902995,2162450,2197474,1982049,2072599,2535754,2904407,3052335,2809540,2475096,2035122,1861283,1917555,2234989,2173203,1938029,2093493,2215375,2924939,3056278,2850394,2387023,2036708,1882870,2008918,2171329,2188822,1906377,2015381,2427617,2731775,3287895,2793006,2516726,2114010,1995895,2074067,2329216,2306262,2047010,2108275,2502928,3084994,3030057,2702018,2743975,2176612,2065968,2118628,2404122,2409018,2128961,2186224,2558279,2885437,3422552,2703367,2532473,2151696,2085209,2182539,2478715,2450612,2170036,2175662,2450046,3061848,3610940,2966856,2476782,2131612],"mode":"markers","name":"Actual","type":"scatter","marker":{"color":"rgba(31,119,180,1)","line":{"color":"rgba(31,119,180,1)"}},"error_y":{"color":"rgba(31,119,180,1)"},"error_x":{"color":"rgba(31,119,180,1)"},"line":{"color":"rgba(31,119,180,1)"},"xaxis":"x","yaxis":"y","frame":null},{"x":[1240196,1299128,1301829,1302758,1313119,1328565,1329726,1353150,1356266,1357712,1360871,1378772,1379497,1385163,1386917,1390353,1400018,1408599,1413254,1414428,1415134,1417234,1426546,1427135,1430242,1441557,1445892,1446674,1452339,1453967,1459015,1459919,1464704,1465089,1470504,1479110,1485061,1488645,1500242,1500962,1501925,1503321,1503845,1506234,1506936,1507428,1509295,1510867,1512522,1513157,1528483,1529693,1531863,1540128,1543302,1547608,1555887,1556011,1561970,1567216,1572373,1576508,1578354,1579772,1582079,1585188,1585512,1588718,1602849,1603853,1607830,1609746,1615241,1616154,1619852,1622364,1635485,1636202,1640347,1647979,1662412,1663832,1665278,1668244,1672724,1678755,1680814,1681149,1701744,1702557,1703507,1710548,1714971,1718550,1723906,1723960,1727393,1727907,1728010,1730740,1731387,1734549,1737701,1738157,1739436,1741755,1748897,1751644,1753578,1766395,1774412,1783603,1784460,1785885,1786764,1804380,1809151,1825125,1826933,1832775,1838965,1855856,1860159,1861283,1867447,1867936,1882675,1882870,1891318,1902995,1903501,1904112,1906377,1912779,1917555,1938029,1949890,1949898,1950510,1952607,1965718,1965873,1967388,1972165,1974222,1979957,1982049,1989660,1994279,1995895,1996245,1999359,2001036,2008918,2010926,2015381,2023229,2035122,2036708,2041522,2047010,2048169,2056105,2064029,2065968,2069201,2072599,2074067,2085209,2086568,2090786,2093493,2094357,2096915,2100482,2108275,2108690,2109623,2114010,2118508,2118628,2128961,2139037,2148089,2151696,2155805,2156873,2161185,2162215,2162450,2164467,2167984,2169754,2170036,2171329,2173203,2175662,2176020,2176612,2182539,2186224,2188822,2197474,2214167,2215375,2225994,2226478,2234989,2285465,2306262,2306943,2310875,2312746,2312832,2316191,2319221,2319273,2324198,2329216,2335770,2346489,2351937,2358946,2365293,2371983,2387023,2389902,2392542,2396713,2403778,2404122,2409018,2427617,2450046,2450612,2459545,2475096,2475535,2476782,2478715,2488282,2502928,2505011,2507085,2512844,2516726,2522442,2532473,2532736,2535754,2538368,2554281,2556038,2557465,2558279,2576005,2624217,2661816,2665391,2680848,2699039,2700111,2702018,2703367,2708217,2730693,2731775,2743975,2759042,2783640,2793006,2809540,2850394,2858509,2880714,2885437,2903574,2904407,2924939,2966856,2997145,3030057,3052335,3056278,3061848,3084994,3107734,3161732,3287895,3422552,3610940],"y":[1387626.33104845,1435277.3431953457,1437461.3074899355,1438212.4747723027,1446590.1326976062,1459079.4005592256,1460018.1575181365,1478958.2462395255,1481477.7696537948,1482646.9708274256,1485201.263017951,1499675.5854309285,1500261.8031701278,1504843.1958739951,1506261.4385147616,1509039.7063104708,1516854.5952061429,1523792.9875096879,1527556.9096834441,1528506.1781328511,1529077.0329244025,1530775.0429276009,1538304.5044274973,1538780.7558045848,1541293.0020331263,1550442.041645597,1553947.2194379133,1554579.5260200568,1559160.1101477321,1560476.4721883067,1564558.1648055187,1565289.1176830858,1569158.1547618019,1569469.4565957217,1573847.8966753972,1580806.5033837422,1585618.3403023293,1588516.2773744543,1597893.3354730688,1598475.5103313082,1599254.1692042034,1600382.9415682342,1600806.6354928419,1602738.324015528,1603305.9445023113,1603703.763988775,1605213.3757392373,1606484.4575130602,1607822.6511108188,1608336.0969927383,1620728.3357113176,1621706.7129036367,1623461.3232402748,1630144.205467148,1632710.6263005536,1636192.3553833019,1642886.5576768632,1642986.821124671,1647805.1266527942,1652046.9173560219,1656216.7447781616,1659560.2073320784,1661052.8389825088,1662199.4000227635,1664064.7852977058,1666578.6486786311,1666840.627364839,1669432.9226363883,1680858.9128055286,1681670.7233022959,1684886.4308178765,1686435.662801747,1690878.7889767825,1691617.0190400777,1694607.1337980907,1696638.2771923926,1707247.6054076138,1707827.3545372772,1711178.9028531138,1717349.9563504516,1729020.1365295758,1730168.3147222146,1731337.5158958454,1733735.7528813151,1737358.1742214714,1742234.6972354185,1743899.5556147448,1744170.4286390645,1760823.0553132875,1761480.4277573829,1762248.5751397822,1767941.7601076483,1771518.0926048607,1774411.9867960259,1778742.7208803734,1778786.3839947414,1781562.2260618745,1781977.8342245622,1782061.1175723381,1784268.5305764957,1784791.6793727193,1787348.3972918207,1789897.0294490021,1790265.7401925537,1791299.9091421207,1793174.9973313666,1798949.848494625,1801171.0072940467,1802734.7936493731,1813098.3147022265,1819580.670033484,1827012.2938141485,1827705.2436106917,1828857.4646842906,1829568.2031570578,1843812.0813553154,1847669.7983673434,1860585.9944583385,1862047.900213473,1866771.6023271321,1871776.6889556071,1885434.3494146653,1888913.6527688378,1889822.4924086446,1894806.5560561277,1895201.9498140153,1907119.5543078913,1907277.2266653311,1914108.0783353401,1923549.8225293146,1923958.9620824661,1924453.0021357776,1926284.4272106558,1931460.9319918344,1935322.6918848227,1951877.4808398138,1961468.0030531161,1961474.471662652,1961969.3202921555,1963664.9045667779,1974266.1470200792,1974391.4763298389,1975616.4692607177,1979479.0377298978,1981142.27895684,1985779.4634179554,1987471.0048116178,1993625.0782089233,1997359.8916397677,1998666.5507660382,1998949.5524332381,2001467.4586951234,2002823.440969106,2009196.6385144438,2010820.2595079781,2014422.4664433345,2020768.1723981439,2030384.5690495903,2031666.9708901008,2035559.4566783849,2039996.9228200763,2040934.0626266035,2047350.923286309,2053758.0810317104,2055325.9102679968,2057940.0370967302,2060687.5789971435,2061874.5688469983,2070883.7247782531,2071982.5798231801,2075393.1542010326,2077581.9699527742,2078280.5797826615,2080348.9176817955,2083233.1089586567,2089534.3432229061,2089869.9023425858,2090624.303929721,2094171.5276840215,2097808.5033956338,2097905.5325386738,2106260.5503306012,2114407.7640411849,2121726.9957311614,2124643.5300557027,2127965.9696286274,2128829.5290016825,2132316.1095415829,2133148.9430193421,2133338.9584244615,2134969.856603724,2137813.6190709854,2139244.7989308238,2139472.8174169674,2140518.3064332223,2142033.5782170291,2144021.867073155,2144311.3373498907,2144790.0144555541,2149582.4455455332,2152562.0488130501,2154662.729759864,2161658.530973041,2175156.0933460835,2176132.8533860184,2184719.1239688578,2185110.4748457852,2191992.2668158901,2232805.9586832407,2249621.9177482477,2250172.5581349991,2253351.87972194,2254864.7257771706,2254934.2633296824,2257650.2707586079,2260100.2566203652,2260142.3025823492,2264124.5403279453,2268181.975659397,2273481.3840217595,2282148.5122237988,2286553.6353178103,2292220.9458475327,2297352.9789381516,2302762.3536626259,2314923.3395902938,2317251.230447059,2319385.8715939373,2322758.4428907656,2328471.03368724,2328749.1838972876,2332707.9729333157,2347746.6815283084,2365882.2369386577,2366339.8910633293,2373562.902186458,2386137.0705482373,2386492.035496525,2387500.330007948,2389063.3077870826,2396798.9562159386,2408641.3631239585,2410325.627331893,2412002.6143540991,2416659.2046438223,2419798.0974211632,2424419.9189346307,2432530.7467165743,2432743.4022550699,2435183.6852025236,2437297.3033684096,2450164.1763116922,2451584.8446810348,2452738.6829070179,2453396.8639273052,2467729.6855066828,2506712.7608753471,2537114.4171183244,2540005.0770047214,2552503.2392044528,2567212.0487131099,2568078.8423909331,2569620.7971890755,2570711.5664720824,2574633.1610032781,2592806.719494652,2593681.5989343948,2603546.2284767847,2615729.0459616366,2635618.4031324321,2643191.5277466965,2656560.5265052109,2689594.0982531458,2696155.6940512192,2714110.1283945609,2717929.0337493727,2732594.1801436618,2733267.7241115975,2749869.4104857245,2783762.4987257542,2808253.4630052173,2834865.3226362942,2852878.7830416518,2856066.9989667046,2860570.7683561402,2879286.0728961532,2897673.0955022145,2941334.5927177863,3043346.9908289788,3152227.4351150123,3304553.486773354],"mode":"lines","name":"Regression Fitted Line","type":"scatter","line":{"color":"red","dash":"dash"},"marker":{"color":"rgba(255,127,14,1)","line":{"color":"rgba(255,127,14,1)"}},"error_y":{"color":"rgba(255,127,14,1)"},"error_x":{"color":"rgba(255,127,14,1)"},"xaxis":"x","yaxis":"y","frame":null}],"highlight":{"on":"plotly_click","persistent":false,"dynamic":false,"selectize":false,"opacityDim":0.20000000000000001,"selected":{"opacity":1},"debounce":0},"shinyEvents":["plotly_hover","plotly_click","plotly_selected","plotly_relayout","plotly_brushed","plotly_brushing","plotly_clickannotation","plotly_doubleclick","plotly_deselect","plotly_afterplot","plotly_sunburstclick"],"base_url":"https://plot.ly"},"evals":[],"jsHooks":[]}</script>
+</div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb19"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a><span class="fu">plot_lag</span>(<span class="at">ts =</span> ts2, <span class="at">var =</span> <span class="st">"y"</span>, <span class="at">lag =</span> <span class="dv">12</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div class="plotly html-widget html-fill-item" id="htmlwidget-affd37fa19fbabf99d85" style="width:100%;height:464px;"></div>
+<script type="application/json" data-for="htmlwidget-affd37fa19fbabf99d85">{"x":{"visdat":{"115c53fad238e":["function () ","plotlyVisDat"]},"cur_data":"115c53fad238e","attrs":{"115c53fad238e":{"x":{},"y":{},"mode":"markers","name":"Actual","alpha_stroke":1,"sizes":[10,100],"spans":[1,20],"type":"scatter"},"115c53fad238e.1":{"x":{},"y":{},"mode":"lines","name":"Regression Fitted Line","alpha_stroke":1,"sizes":[10,100],"spans":[1,20],"type":"scatter","line":{"color":"red","dash":"dash"},"inherit":true}},"layout":{"margin":{"b":40,"l":60,"t":25,"r":10},"title":"y vs Lag 12","xaxis":{"domain":[0,1],"automargin":true,"title":"Lag 12"},"yaxis":{"domain":[0,1],"automargin":true,"title":"y"},"annotations":[{"x":0.050000000000000003,"y":0.94999999999999996,"xref":"paper","yref":"paper","text":"y = 74014 + 0.98*lag12","showarrow":false,"font":{"size":12}},{"x":0.050000000000000003,"y":0.88,"xref":"paper","yref":"paper","text":"Adjusted R² = 0.918","showarrow":false,"font":{"size":12}}],"hovermode":"closest","showlegend":true},"source":"A","config":{"modeBarButtonsToAdd":["hoverclosest","hovercompare"],"showSendToCloud":false},"data":[{"x":[2505011,2156873,2086568,1663832,1385163,1313119,1459919,1528483,1360871,1507428,1561970,1965873,2319273,2090786,2096915,1734549,1470504,1453967,1602849,1582079,1408599,1506936,1766395,2214167,2532736,2346489,2041522,1603853,1379497,1240196,1464704,1512522,1299128,1417234,1616154,2108690,2512844,2358946,1952607,1609746,1441557,1356266,1452339,1445892,1357712,1426546,1647979,2176020,2396713,2094357,2048169,1585188,1386917,1400018,1547608,1555887,1301829,1302758,1529693,2169754,2010926,1999359,1972165,1543302,1390353,1415134,1615241,1607830,1328565,1501925,1622364,1965718,2306943,2403778,1967388,1662412,1414428,1413254,1513157,1741755,1446674,1479110,1681149,2225994,2554281,2335770,2109623,1672724,1430242,1459015,1556011,1531863,1329726,1488645,1714971,2226478,2538368,2162215,1996245,1585512,1353150,1378772,1503321,1578354,1427135,1510867,1619852,2310875,2624217,2312746,1974222,1540128,1465089,1500962,1668244,1718550,1485061,1506234,1809151,2522442,2699039,2285465,2056105,1665278,1509295,1503845,1728010,1727907,1500242,1579772,1860159,2351937,2557465,2319221,1949890,1784460,1703507,1702557,1891318,1832775,1640347,1727393,1989660,2312832,2661816,2371983,2316191,1783603,1572373,1567216,1738157,1739436,1588718,1680814,2118508,2700111,2997145,2556038,2365293,1786764,1636202,1576508,1701744,1751644,1635485,1730740,2167984,2475535,2903574,2730693,2392542,1826933,1678755,1723906,1882675,1867936,1723960,1804380,2064029,2389902,2880714,2459545,2164467,1903501,1785885,1825125,2001036,2023229,1774412,1748897,1979957,2665391,2708217,2161185,2324198,1753578,1710548,1731387,1950510,1904112,1737701,1838965,2155805,2858509,3107734,2507085,2576005,2148089,1855856,1867447,2139037,2100482,1949898,2069201,2488282,2759042,3161732,2783640,2680848,1994279,1912779,1902995,2162450,2197474,1982049,2072599,2535754,2904407,3052335,2809540,2475096,2035122,1861283,1917555,2234989,2173203,1938029,2093493,2215375,2924939,3056278,2850394,2387023,2036708,1882870,2008918,2171329,2188822,1906377,2015381,2427617,2731775,3287895,2793006,2516726,2114010,1995895,2074067,2329216,2306262,2047010,2108275,2502928,3084994,3030057,2702018,2743975,2176612,2065968,2118628,2404122,2409018,2128961,2186224,2558279,2885437,3422552,2703367,2532473,2151696],"y":[2319273,2090786,2096915,1734549,1470504,1453967,1602849,1582079,1408599,1506936,1766395,2214167,2532736,2346489,2041522,1603853,1379497,1240196,1464704,1512522,1299128,1417234,1616154,2108690,2512844,2358946,1952607,1609746,1441557,1356266,1452339,1445892,1357712,1426546,1647979,2176020,2396713,2094357,2048169,1585188,1386917,1400018,1547608,1555887,1301829,1302758,1529693,2169754,2010926,1999359,1972165,1543302,1390353,1415134,1615241,1607830,1328565,1501925,1622364,1965718,2306943,2403778,1967388,1662412,1414428,1413254,1513157,1741755,1446674,1479110,1681149,2225994,2554281,2335770,2109623,1672724,1430242,1459015,1556011,1531863,1329726,1488645,1714971,2226478,2538368,2162215,1996245,1585512,1353150,1378772,1503321,1578354,1427135,1510867,1619852,2310875,2624217,2312746,1974222,1540128,1465089,1500962,1668244,1718550,1485061,1506234,1809151,2522442,2699039,2285465,2056105,1665278,1509295,1503845,1728010,1727907,1500242,1579772,1860159,2351937,2557465,2319221,1949890,1784460,1703507,1702557,1891318,1832775,1640347,1727393,1989660,2312832,2661816,2371983,2316191,1783603,1572373,1567216,1738157,1739436,1588718,1680814,2118508,2700111,2997145,2556038,2365293,1786764,1636202,1576508,1701744,1751644,1635485,1730740,2167984,2475535,2903574,2730693,2392542,1826933,1678755,1723906,1882675,1867936,1723960,1804380,2064029,2389902,2880714,2459545,2164467,1903501,1785885,1825125,2001036,2023229,1774412,1748897,1979957,2665391,2708217,2161185,2324198,1753578,1710548,1731387,1950510,1904112,1737701,1838965,2155805,2858509,3107734,2507085,2576005,2148089,1855856,1867447,2139037,2100482,1949898,2069201,2488282,2759042,3161732,2783640,2680848,1994279,1912779,1902995,2162450,2197474,1982049,2072599,2535754,2904407,3052335,2809540,2475096,2035122,1861283,1917555,2234989,2173203,1938029,2093493,2215375,2924939,3056278,2850394,2387023,2036708,1882870,2008918,2171329,2188822,1906377,2015381,2427617,2731775,3287895,2793006,2516726,2114010,1995895,2074067,2329216,2306262,2047010,2108275,2502928,3084994,3030057,2702018,2743975,2176612,2065968,2118628,2404122,2409018,2128961,2186224,2558279,2885437,3422552,2703367,2532473,2151696,2085209,2182539,2478715,2450612,2170036,2175662,2450046,3061848,3610940,2966856,2476782,2131612],"mode":"markers","name":"Actual","type":"scatter","marker":{"color":"rgba(31,119,180,1)","line":{"color":"rgba(31,119,180,1)"}},"error_y":{"color":"rgba(31,119,180,1)"},"error_x":{"color":"rgba(31,119,180,1)"},"line":{"color":"rgba(31,119,180,1)"},"xaxis":"x","yaxis":"y","frame":null},{"x":[1240196,1299128,1301829,1302758,1313119,1328565,1329726,1353150,1356266,1357712,1360871,1378772,1379497,1385163,1386917,1390353,1400018,1408599,1413254,1414428,1415134,1417234,1426546,1427135,1430242,1441557,1445892,1446674,1452339,1453967,1459015,1459919,1464704,1465089,1470504,1479110,1485061,1488645,1500242,1500962,1501925,1503321,1503845,1506234,1506936,1507428,1509295,1510867,1512522,1513157,1528483,1529693,1531863,1540128,1543302,1547608,1555887,1556011,1561970,1567216,1572373,1576508,1578354,1579772,1582079,1585188,1585512,1588718,1602849,1603853,1607830,1609746,1615241,1616154,1619852,1622364,1635485,1636202,1640347,1647979,1662412,1663832,1665278,1668244,1672724,1678755,1680814,1681149,1701744,1702557,1703507,1710548,1714971,1718550,1723906,1723960,1727393,1727907,1728010,1730740,1731387,1734549,1737701,1738157,1739436,1741755,1748897,1751644,1753578,1766395,1774412,1783603,1784460,1785885,1786764,1804380,1809151,1825125,1826933,1832775,1838965,1855856,1860159,1861283,1867447,1867936,1882675,1882870,1891318,1902995,1903501,1904112,1906377,1912779,1917555,1938029,1949890,1949898,1950510,1952607,1965718,1965873,1967388,1972165,1974222,1979957,1982049,1989660,1994279,1995895,1996245,1999359,2001036,2008918,2010926,2015381,2023229,2035122,2036708,2041522,2047010,2048169,2056105,2064029,2065968,2069201,2072599,2074067,2086568,2090786,2093493,2094357,2096915,2100482,2108275,2108690,2109623,2114010,2118508,2118628,2128961,2139037,2148089,2151696,2155805,2156873,2161185,2162215,2162450,2164467,2167984,2169754,2171329,2173203,2176020,2176612,2186224,2188822,2197474,2214167,2215375,2225994,2226478,2234989,2285465,2306262,2306943,2310875,2312746,2312832,2316191,2319221,2319273,2324198,2329216,2335770,2346489,2351937,2358946,2365293,2371983,2387023,2389902,2392542,2396713,2403778,2404122,2409018,2427617,2459545,2475096,2475535,2488282,2502928,2505011,2507085,2512844,2516726,2522442,2532473,2532736,2535754,2538368,2554281,2556038,2557465,2558279,2576005,2624217,2661816,2665391,2680848,2699039,2700111,2702018,2703367,2708217,2730693,2731775,2743975,2759042,2783640,2793006,2809540,2850394,2858509,2880714,2885437,2903574,2904407,2924939,2997145,3030057,3052335,3056278,3084994,3107734,3161732,3287895,3422552],"y":[1289847.7563525701,1347622.1040754805,1350270.0459949737,1351180.796843996,1361338.2667543518,1376480.8476090329,1377619.0410812772,1400582.9031776162,1403637.6928929591,1405055.2878635579,1408152.2328926877,1425701.5880577562,1426412.3462553248,1431967.0441138397,1433686.5887738883,1437055.0924522961,1446530.2344929858,1454942.6704837938,1459506.2282902512,1460657.1663922449,1461349.2978232566,1463408.0457058689,1472537.1220310528,1473114.5517943189,1476160.5183044507,1487253.2479671929,1491503.0918105855,1492269.7303078251,1497823.4478102056,1499419.4675972974,1504368.3053646437,1505254.5473103016,1509945.5514142541,1510322.9885260663,1515631.6169948024,1524068.5618889749,1529902.6612458443,1533416.2576321696,1544785.4477248627,1545491.3041417582,1546435.3870993564,1547803.9642632261,1548317.6708777447,1550659.7416832498,1551347.9516897232,1551830.2869079353,1553660.6118111911,1555201.7316547467,1556824.2210574721,1557446.7472029286,1572471.6853214607,1573657.9162442992,1575785.2890563319,1583887.9325086134,1586999.5828797619,1591220.9963952517,1599337.3648334173,1599458.928994105,1605300.8712000512,1610443.8194820439,1615499.516068059,1619553.2886845362,1621363.026108966,1622753.1711077965,1625014.8527102664,1628062.7799326673,1628380.4153202702,1631523.4370877251,1645376.8496254373,1646361.1271845528,1650260.0035317668,1652138.365885617,1657525.4228451194,1658420.4879959885,1662045.8449816552,1664508.4995917135,1677371.7524335026,1678074.6677819944,1682138.2439598173,1689620.3219789115,1703769.8020692659,1705161.9077803656,1706579.5027509644,1709487.2390461208,1713879.2345290272,1719791.7623766628,1721810.3156577577,1722138.734962841,1742329.1695544608,1743126.1990918722,1744057.5374197206,1750960.2249632794,1755296.3401465151,1758805.0347521673,1764055.8222089633,1764108.7614402305,1767474.3240502344,1767978.227103407,1768079.2037852686,1770755.5760326646,1771389.8664517361,1774489.7525492697,1777579.8350854574,1778026.8774828245,1779280.7529789489,1781554.1988550338,1788555.9023681849,1791248.9406698688,1793144.9494341414,1805710.1740110188,1813569.6891419252,1822580.1423748252,1823420.3075821581,1824817.3150739307,1825679.0481162241,1842949.0017829381,1847626.2809010064,1863286.4897947446,1865058.9736860604,1870786.214224261,1876854.6186972945,1893413.8141664399,1897632.2866135263,1898734.2069087911,1904777.1221223257,1905256.5162721339,1919705.985339669,1919897.1547859116,1928179.2034108208,1939626.82199428,1940122.8821983761,1940721.879796603,1942942.3864414205,1949218.6264149845,1953900.8073137258,1973972.6188130619,1985600.6229252834,1985608.4657743599,1986208.4437287212,1988264.2505429299,2001117.699823373,2001269.6550242326,2002754.8945681171,2007438.0558229929,2009454.6483918186,2015076.9908236193,2017127.8958571551,2024589.386397423,2029117.6513830358,2030701.9068965127,2031045.0315436148,2034097.8605466885,2035741.9177843747,2043469.084837113,2045437.6399553444,2049805.1265348862,2057498.9614790489,2069158.3369875769,2070713.1818170166,2075432.6162488719,2080812.810715432,2081949.0434754072,2089729.1497594127,2097497.4917698037,2099398.4023147491,2102567.8936978374,2105899.1438431311,2107338.3066486907,2119593.7386870417,2123728.8808626886,2126382.7049189894,2127229.7326192642,2129737.4836115129,2133234.4139435505,2140874.3293003114,2141281.1770961611,2142195.8493697215,2146496.6717321123,2150906.3136254409,2151023.9563615904,2161153.9763001776,2171032.0447121789,2179906.2284423728,2183442.3730197931,2187470.6563767712,2188517.6767284996,2192744.9723807969,2193754.7391994116,2193985.1228910373,2195962.50121448,2199410.4137397883,2201145.6440979899,2202689.7050099494,2204526.8924061474,2207288.5556372516,2207868.9264689214,2217292.1096344786,2219839.0748721105,2228321.1161484732,2244686.2011029725,2245870.4713135418,2256280.8731066184,2256755.3654757538,2265099.1765371412,2314583.6327860658,2334972.0993168703,2335639.7218445176,2339494.4821656756,2341328.7284934698,2341413.0391210434,2344706.0553770885,2347676.5344648575,2347727.5129838558,2352555.7669466492,2357475.194029958,2363900.4481359776,2374408.8855425119,2379749.8657636889,2386621.1819109414,2392843.5022971039,2399402.084837426,2414146.6411014688,2416969.0864129169,2419557.2266082009,2423646.2920455229,2430572.5081363115,2430909.7506466061,2435709.5742814969,2453943.2180285002,2485244.0286932848,2500489.5469420967,2500919.923285176,2513416.5229326333,2527774.8188796523,2529816.9007079769,2531850.1593310903,2537496.0303101214,2541301.7728245505,2546905.4884897941,2556739.4408757393,2556997.2745391331,2559955.9893532875,2562518.6402890724,2578119.0474586012,2579841.5331870536,2581240.5013910956,2582038.5112846415,2599416.3041261588,2646681.2340864004,2683541.644390373,2687046.4175714869,2702199.7823436484,2720033.4407877442,2721084.382564011,2722953.92171265,2724276.422138195,2729031.1493908949,2751065.6338716545,2752126.3792092674,2764086.7240511104,2778857.7499307869,2802972.5501291198,2812154.5656855712,2828363.7740146723,2868415.243536694,2876370.8335687886,2898139.6415370782,2902769.8635606868,2920550.5827735155,2921367.2194336182,2941495.8915887601,3012283.4866420496,3044548.967743258,3066389.3417093717,3070254.8859480098,3098406.792708532,3120700.0912088202,3173637.361763726,3297322.0327704037,3429333.8487841813],"mode":"lines","name":"Regression Fitted Line","type":"scatter","line":{"color":"red","dash":"dash"},"marker":{"color":"rgba(255,127,14,1)","line":{"color":"rgba(255,127,14,1)"}},"error_y":{"color":"rgba(255,127,14,1)"},"error_x":{"color":"rgba(255,127,14,1)"},"xaxis":"x","yaxis":"y","frame":null}],"highlight":{"on":"plotly_click","persistent":false,"dynamic":false,"selectize":false,"opacityDim":0.20000000000000001,"selected":{"opacity":1},"debounce":0},"shinyEvents":["plotly_hover","plotly_click","plotly_selected","plotly_relayout","plotly_brushed","plotly_brushing","plotly_clickannotation","plotly_doubleclick","plotly_deselect","plotly_afterplot","plotly_sunburstclick"],"base_url":"https://plot.ly"},"evals":[],"jsHooks":[]}</script>
+</div>
+</div>
+</section>
+
+</main>
+<!-- /main column -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+        const codeEl = trigger.previousElementSibling.cloneNode(true);
+        for (const childEl of codeEl.children) {
+          if (isCodeAnnotation(childEl)) {
+            childEl.remove();
+          }
+        }
+        return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp('/' + window.location.host + '/');
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+</div> <!-- /content -->
+
+
+
+
+</body></html>

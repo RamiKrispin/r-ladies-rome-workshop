@@ -1,0 +1,80 @@
+---
+title: "Seasonal Analysis"
+author: "Rami Krispin"
+date: last-modified
+format: 
+    html:
+        code-fold: false
+        warning: false
+        toc: true
+---
+
+
+Seasonality is a structural pattern of time series data, which is derived from periodic fluctuations of the series. Most of the seasonal patterns in nature are related to the Earth spinning around the Sun. For example, the demand for electricity is high during the daytime and very low past midnight. Similarly, the demand for natural gas is high during the wintertime and low during the summer. 
+
+Time series can be categorized into one of the following three buckets:
+
+- Does not have a seasonal component
+- Has one seasonal component, such as monthly, quarterly, etc.
+- Has multiple seasonal components, such as hourly and day of the week.
+
+In this section, we will use a simple seasonal plot to explore seasonality. 
+
+## Load the Libraries and Data
+
+```{r}
+library(dplyr)
+library(plotly)
+library(tsibble)
+
+load(file = "./data/ts.RData")
+```
+
+
+
+## Create a Seasonal Plot
+
+```{r}
+head(ts2)
+```
+
+Let's reformat the data:
+
+```{r}
+ts2 <- ts2 |>
+dplyr::mutate(month = lubridate::month(date), 
+month_label = lubridate::month(date, label = TRUE),
+year = lubridate::year(date)) |>
+dplyr::arrange(date)
+
+ts2
+```
+
+
+```{r}
+years <- unique(ts2$year)
+
+colors <- colorRampPalette(RColorBrewer::brewer.pal(9, "YlGnBu"))(length(years))
+
+
+p <- plot_ly()
+
+for (i in seq_along(years)) {
+  year_data <- ts2 |> filter(year == years[i])
+  
+  p <- p |>
+    add_trace(
+      data = year_data,
+      x = ~month_label,
+      y = ~y,
+      type = 'scatter',
+      mode = 'lines+markers',
+      name = as.character(years[i]),
+      line = list(color = colors[i]),
+      marker = list(color = colors[i])
+    )
+}
+
+
+p
+```

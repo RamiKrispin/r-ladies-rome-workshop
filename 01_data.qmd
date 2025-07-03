@@ -1,0 +1,274 @@
+---
+title: "Data"
+author: "Rami Krispin"
+date: last-modified
+format: 
+  html:
+    code-fold: false 
+    warning: false
+    toc: true
+---
+
+In this notebook, we will pull the required time series data from the EIA API and reformat it.
+
+
+The EIA API is a great resource for time series data. It provides access to various types of time series data from the energy industry. We will use the EIAapi library to pull the following time series:
+
+- Number of natural gas consumers in California
+- US monthly demand for natural gas 
+- Hourly demand for electricity in California by balancing authority subregion PGAE
+
+
+<br>
+<br /><figure>
+ <img src="images/eia_api.png" width="100%" align="center"/></a>
+<figcaption> The EIA website</figcaption>
+</figure>
+
+<br>
+<br />
+
+## Load the Libraries
+
+We will use the EIAapi library to pull the required time series from the API and use the plotly library to plot the data, and the tsibble library to reformat the data into time series objects.
+
+```{r}
+library(EIAapi)
+library(plotly)
+library(tsibble)
+```
+
+
+## API Settings
+
+```{r}
+#| label: loading the API key
+api_key <- Sys.getenv("EIA_API_KEY")
+```
+
+## Number of Natural Gas Consumers in California
+
+Series details:
+
+- **Series description:** Total number of natural gas consumers in California 
+- **Area:** California
+- **Process:** Number of Residential Consumers
+- **API dashboard [link](https://www.eia.gov/opendata/browser/natural-gas/cons/num?frequency=annual&data=value;&facets=duoarea;process;&duoarea=SCA;&process=VN3;&sortColumn=period;&sortDirection=desc;)**
+- **API path:** 'natural-gas/cons/num/data/'
+- **Query schema:**
+
+``` json
+{
+    "frequency": "annual",
+    "data": [
+        "value"
+    ],
+    "facets": {
+        "duoarea": [
+            "SCA"
+        ],
+        "process": [
+            "VN3"
+        ]
+    },
+    "start": null,
+    "end": null,
+    "sort": [
+        {
+            "column": "period",
+            "direction": "desc"
+        }
+    ],
+    "offset": 0,
+    "length": 5000
+}
+```
+
+```{r}
+ts_1 <- eia_get(
+        api_key = api_key,
+        api_path = "natural-gas/cons/num/data/",
+        # frequency = "monthly",
+        data = "value",
+        facets = list(duoarea = "SCA", process = "VN3") 
+    ) |>
+    dplyr::arrange(period)
+
+head(ts_1)
+```
+
+
+```{r}
+ts1 <- ts_1 |>
+dplyr::select(index = period, y = value, series_id = duoarea) |>
+as_tsibble(index = index)
+
+head(ts1)
+```
+
+
+
+```{r}
+plot_ly(data = ts1, x = ~ index, y = ~ y, type = "scatter", mode = "lines") |>
+plotly::layout(title = "Number of Natural Gas Consumers in California", 
+yaxis = list(title = "Number of Consumers"),
+xaxis = list(title = "Period")) 
+```
+
+## US Monthly Demand for Natural Gas 
+
+Series details:
+
+- **Series description:** US total monthly demand for natural gas 
+- **Area:** US
+- **Process:** Delivered to Consumers
+- **API dashboard [link](https://www.eia.gov/opendata/browser/natural-gas/cons/sum?frequency=monthly&data=value;&facets=duoarea;process;&duoarea=NUS;&process=VGT;&sortColumn=period;&sortDirection=desc;)**
+- **API path:** 'natural-gas/cons/sum/data/'
+- **Query schema:**
+
+``` json
+{
+    "frequency": "monthly",
+    "data": [
+        "value"
+    ],
+    "facets": {
+        "duoarea": [
+            "NUS"
+        ],
+        "process": [
+            "VGT"
+        ]
+    },
+    "start": null,
+    "end": null,
+    "sort": [
+        {
+            "column": "period",
+            "direction": "desc"
+        }
+    ],
+    "offset": 0,
+    "length": 5000
+}
+```
+
+
+Let's pull the data:
+
+```{r}
+ts_2 <- eia_get(
+        api_key = api_key,
+        api_path = "natural-gas/cons/sum/data/",
+        frequency = "monthly",
+        data = "value",
+        facets = list(duoarea = "NUS", process = "VGT")
+    ) |>
+    dplyr::arrange(period)
+```
+And reformat it:
+
+```{r}
+ts2 <- ts_2 |>
+dplyr::mutate(date = lubridate::ym(period),
+index = yearmonth(date)) |>
+dplyr::select(index, date, y = value, series_id = duoarea) |> 
+dplyr::arrange(date) |>
+as_tsibble(index = index)
+```
+
+And plot it:
+
+```{r}
+plot_ly(data = ts2, x = ~ date, y = ~ y, type = "scatter", mode = "lines") |>
+plotly::layout(title = "US Monthly Demand for Natural Gas", 
+yaxis = list(title = "MMCF"),
+xaxis = list(title = "Period")) 
+```
+
+
+## Hourly Demand for Electricity in California by Balancing Authority Subregion PGAE
+
+Series details:
+
+- **Series description:** Hourly demand by balancing authority subregion. Source: Form EIA-930 Product: Hourly Electric Grid Monitor
+- **Balancing authority:** CISO
+- **Subregion:** PGAE
+- **API dashboard [link](https://www.eia.gov/opendata/browser/electricity/rto/region-sub-ba-data?frequency=hourly&data=value;&facets=subba;parent;&subba=PGAE;&parent=CISO;&sortColumn=period;&sortDirection=desc;)**
+- **API path:** `electricity/rto/region-sub-ba-data/data/`
+- **Query schema:**
+  
+``` json
+{
+    "frequency": "hourly",
+    "data": [
+        "value"
+    ],
+    "facets": {
+        "subba": [
+            "PGAE"
+        ],
+        "parent": [
+            "CISO"
+        ]
+    },
+    "start": null,
+    "end": null,
+    "sort": [
+        {
+            "column": "period",
+            "direction": "desc"
+        }
+    ],
+    "offset": 0,
+    "length": 5000
+}
+```
+
+Pulling the series:
+```{r}
+ts_3 <- eia_backfill(
+        api_key = api_key,
+        api_path = "electricity/rto/region-sub-ba-data/data/",
+        frequency = "hourly",
+        data = "value",
+        facets = list(subba = "PGAE", parent = "CISO"),
+        start = as.POSIXct("2019-01-01"),
+        end = as.POSIXct("2025-07-01"),
+        offset = 1500
+    )  |> dplyr::arrange(time) 
+
+head(ts_3)
+```
+
+
+Converting the series to a `tsibble` object:
+```{r}
+ts3 <- ts_3 |>
+dplyr::distinct() |>
+dplyr::select(index = time, y = value, series_id = subba) |>
+as_tsibble(index = index)
+```
+
+
+
+Plotting the series:
+
+```{r}
+plot_ly(data = ts3, x = ~ index, y = ~ y, type = "scatter", mode = "lines") |>
+plotly::layout(title = "Hourly Demand for Electricity in California Subregion PGAE", 
+yaxis = list(title = "MegaWatthHours"),
+xaxis = list(title = "Period"))  
+```
+
+
+## Saving the Data
+
+```{r}
+save(ts1, ts2, ts3, file = "./data/ts.RData")
+```
+
+
+
+
+

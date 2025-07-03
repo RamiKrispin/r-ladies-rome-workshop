@@ -4,7 +4,7 @@ echo "Build the docker"
 
 # Parameters
 user_name="rkrispin"
-image_label="r-dev"
+image_label="r-ladies-rome-workshop"
 
 # Identify the CPU type (M1 vs Intel)
 if [[ $(uname -m) ==  "aarch64" ]] ; then

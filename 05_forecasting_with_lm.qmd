@@ -1,0 +1,109 @@
+---
+title: "Forecasting with Linear Regression"
+author: "Rami Krispin"
+date: last-modified
+format: 
+    html:
+        code-fold: false
+        warning: false
+        toc: true
+---
+
+
+
+
+## Required Libraries
+```{r}
+library(feasts)
+library(fabletools)
+library(tsibble)
+library(dplyr)
+library(plotly)
+```
+
+Loading supporting functions:
+
+```{r}
+source("./functions.R")
+```
+
+
+## Load Data
+
+
+```{r}
+load(file = "./data/ts.RData")
+```
+
+
+## Modeling Trend
+
+```{r}
+head(ts1)
+
+ts1 <- ts1 |> 
+dplyr::filter(index > 1986)
+
+
+p <- plot_ly(data = ts1, x = ~index, y = ~y, type = "scatter", mode = "lines") 
+
+p
+```
+
+
+### Fitting a Linear Trend
+
+To model the trend we will create an index variable and use linear regression model fit the index against the dependent variable - the series of interest:
+
+```{r}
+ts1 <- ts1 |> 
+dplyr::mutate(trend = 1:nrow(ts1))
+
+head(ts1)
+```
+
+
+Let's now set a regression model:
+
+```{r}
+md1 <- lm(y ~ trend, data = ts1)
+
+summary(md1)
+```
+
+We will fit the model on the series to see the trend fit:
+
+```{r}
+fit1 <- predict(object = md1, newdata = ts1,  interval = "confidence", level = 0.95)
+ts1$fit1 <- fit1[, 1]
+p |> 
+add_lines(data = ts1, x = ~index, y = ~fit1, mode = "lines", line = list(color = "black", dash = "dash")) 
+```
+
+
+### Residuals Analysis
+
+The goal of the residual analysis is to check the goodness of fit of the model with data the it was encountered during the fit process. The residual could indicate whether the model has a good fit or or some patterns left and a direction about the type of features that are needed for better predictions.
+
+```{r}
+ts1$res1 <- ts1$y - ts1$fit1
+
+
+plot_ly(x = ts1$index, y = ts1$res1, type = "scatter", mode = "markers")
+```
+
+Clearly, you can see that some patterns are left in the residuals. We can check for autocorrelation:
+
+```{r}
+plot_acf(ts = ts1, var = "res1", lag_max = 60, frequency = NULL)
+```
+
+
+
+
+
+
+
+
+
+

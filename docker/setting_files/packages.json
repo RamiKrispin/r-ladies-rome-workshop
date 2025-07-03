@@ -15,6 +15,24 @@
         {
             "package": "plotly",
             "version": "4.10.2"
+        },
+        {
+            "package": "EIAapi",
+            "version": "0.2.0"
+        },
+        {
+            "package": "tsibble",
+            "version": "1.1.6"
+        },
+        {
+            "package": "feasts",
+            "version": "0.4.1"
+        },
+        {
+            "package": "fable",
+            "version": "0.4.1"
         }
+
+
     ]
 }

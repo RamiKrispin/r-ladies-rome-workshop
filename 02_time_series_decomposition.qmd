@@ -1,0 +1,298 @@
+---
+title: "Time Series Decomposition"
+author: "Rami Krispin"
+date: last-modified
+format: 
+    html:
+        code-fold: false
+        warning: false
+        toc: true
+---
+
+This section focuses on time series decomposition. It is a technique used to break down a time series into its constituent components:
+
+- **Trend -** The long-term pattern of the data
+- **Seasonal -** The repeating patterns in the data, such as weekly or monthly cycles
+- **Irregular -** Random fluctuations that do not follow any clear pattern
+
+::: {.callout-tip}
+## The irregular component
+
+On ideal time series, the trend and seasonal components explain the total variation of the series. Therefore, the irregular component should be white noise - hench a time series with no correlation or any patterns. The reality is that often there are other patterns in the series that cannot be explained by the trend and seasonal components alone. In this case, the irregular component can contain valuable information about the series.
+:::
+
+There are mainly two common techniques for time series decomposition:
+
+- Classical decomposition
+- STL decomposition
+  
+We will use the 
+
+## Required Libraries
+```{r}
+library(feasts)
+library(fabletools)
+library(tsibble)
+library(dplyr)
+library(plotly)
+```
+
+## Load Data
+
+
+```{r}
+load(file = "./data/ts.RData")
+```
+
+Let's look at our data. For this section we will use the US demand for natural gas (`ts2`):
+```{r}
+head(ts2)
+```
+
+
+
+Let's plot the series with Plotly:
+
+```{r}
+ts2 |> plot_ly() |> 
+add_lines(x = ~ date, 
+    y = ~ y) |>
+    layout(title = "Natural Gas Delivered to Consumers in the U.S.",
+    xaxis = list(title = "Source: EIA Webstie"),
+    yaxis = list(title = "MMCF")) 
+```
+
+
+
+## Classical Decomposition
+
+The classical decomposition method is simple and widely used in time series analysis to decompose a time series into its three components - trend, seasonal and irregular components. The [`decompose`](https://stat.ethz.ch/R-manual/R-devel/library/stats/html/decompose.html) function from the **stats** library provides an implementation of this method. For this demonstration, we will use the [`classical_decomposition`](https://feasts.tidyverts.org/reference/classical_decomposition.html) function from the **feasts** library.
+
+The calculation of the classical decomposition is straightforward and includes the following steps:
+
+- Step 1 - Estimate the trend component:
+  Use smoothing method to remove the seasonal component from the series. This typically involve a moving average or a weighted moving average method. The rule of thumb is to use a centered moving average, where the number of periods to be averaged is equal to the series frequency. For example, for a monthly time series we can use a centered 12-month moving average:
+$$
+  \hat{X_t} = \frac{Y_{t-6} + Y_{t-5} + ... + Y_{t+5}}{12}
+$$
+
+    Where $X_t$ represents the smoothed value of the time series at time t. The smoothing removes (or reduce significantly) the seasonal and irregular component from the time series and leaves the trend estimate.
+- Step 2 - Detrend the series:
+  Subtract the estimated trend component from the original time series to obtain a detrended series, which represents the seasonal and irregular components for additive model:
+  $$
+  \hat{D_t} = Y_t - \hat{X_t}
+  $$
+  And in the case of multiplicative model:
+   $$
+   \hat{D_t} = \frac{Y_t}{\hat{X_t}}
+  $$ 
+  Where $D_t$ is the detrended value of the time series at time t.
+- Step 3 - Estimate the seasonal component:
+  Group the detrend series by the frequency period and compute the mean for each group. For example, if the data has a monthly frequency, then you will group all the values for the month of January together to get the average value for that month. This represents by the following notation:
+
+  $$
+    \hat{S_m} = \frac{1}{n} \sum_{i=0}^{n} \hat{D}_{m+i \times k}
+  $$
+  Where $S_m$ is the seasonal component of the time series at month m, and $k$ represents the number of periodic cycles (in this case years).
+
+- Step 4 - Estimate the irregular component:
+  Subtract from the series the trend and seasonal estimates to extract the irregular estimation for additive model:
+  $$
+    \hat{I_t} = Y_t - \hat{T_t} - \hat{S_t}
+  $$
+  And in the case of multiplicative model:
+   $$
+   \hat{I_t} = \frac{Y_t}{\hat{D_t} \times \hat{S_t}}
+   $$
+
+
+
+Let's use the `classical_decomposition` function to decompose the series:
+
+```{r}
+ts_classic_d <- ts2 |>
+  model(
+    classical_decomposition(y, type = "additive"),
+  ) |>
+  components()
+
+
+head(ts_classic_d, 10)
+```
+
+As you can notice, the trend component is missing its first 6 observations as the function is using a centered moving average method which requires the previous and future 6 observations for a monthly time series (i.e., frequency of 12). Let's plot the output:
+
+```{r}
+#| fig-height: 10
+d <- ts_classic_d |>
+dplyr::mutate(date = as.Date(index))
+color <- "#0072B5"
+
+dec_attr <- attributes(ts_classic_d)
+
+series <- d |> plotly::plot_ly(x = ~date, y = ~y, type = "scatter", mode = "lines", line = list(color = color), name = "Actual", showlegend = FALSE) |>
+plotly::layout(yaxis = list(title = "Actial"))
+
+trend <- d |> plotly::plot_ly(x = ~date, y = ~trend, type = "scatter", mode = "lines", line = list(color = color), name = "Trend", showlegend = FALSE) |>
+plotly::layout(yaxis = list(title = "Trend"))
+
+seasonal <- d |> plotly::plot_ly(x = ~date, y = ~seasonal, type = "scatter", mode = "lines", line = list(color = color), name = "Seasonal", showlegend = FALSE) |>
+plotly::layout(yaxis = list(title = "Seasonal"))
+
+seasonal_adj <- d |> plotly::plot_ly(x = ~date, y = ~season_adjust, type = "scatter", mode = "lines", line = list(color = color), name = "Seasonal Adjusted", showlegend = FALSE) |>
+plotly::layout(yaxis = list(title = "Seasonal Adjusted"))
+
+
+irregular <- d |> plotly::plot_ly(x = ~date, y = ~random, 
+type = "scatter", mode = "lines", 
+line = list(color = color), name = "Irregular", showlegend = FALSE) |>
+plotly::layout(yaxis = list(title = "Irregular"))
+
+plotly::subplot(series, trend, seasonal, seasonal_adj, irregular, 
+nrows = 5, titleY = TRUE, shareX = TRUE) |>
+plotly::layout(xaxis = list(title = paste("Decomposition Method: ", dec_attr$method, sep = "")))
+```
+
+
+The downside of the classical method that it cannot handle well fluctuations in the seasonal component over time as it average across all periods. The next method - STL decomposition has more robust approach for handling changes in the seasonal component over time.
+
+## STL Decomposition
+
+The Seasonal and Trend decomposition using Loess (STL) method is an alternative and robust approach for decomposing a time series into its components. Unlike the classical method, the STL method uses a locally weighted regression to calculate the seasonal component. The advantages of this approach over the classical method are: 
+- Can handle changes in the seasonal component over time
+- Can handle time series with multiple seasonality components
+- Provides the user with control over the trend smoothing and the seasonal window length
+- No loss of observations during the trend estimate process
+
+
+Like the classical method, both the **stats** and **feasts**  libraries provide an implementation of the STL method with the [stl](https://stat.ethz.ch/R-manual/R-devel/library/stats/html/stl.html) and [STL](https://feasts.tidyverts.org/reference/STL.html) functions, respectively. In the following example, we will use the `STL` function:
+
+```{r}
+ts_stl_d <- ts2 |>
+  model(
+    STL(y ~ trend(window = 11) +
+                   season(window = 7),
+    robust = TRUE),
+  ) |>
+  components()
+
+
+head(ts_stl_d, 10)
+```
+
+
+
+```{r}
+#| fig-height: 10
+d <- ts_stl_d |>
+dplyr::mutate(date = as.Date(index))
+color <- "#0072B5"
+
+dec_attr <- attributes(ts_stl_d)
+
+series <- d |> plotly::plot_ly(x = ~date, y = ~y, type = "scatter", mode = "lines", line = list(color = color), name = "Actual", showlegend = FALSE) |>
+plotly::layout(yaxis = list(title = "Actial"))
+
+trend <- d |> plotly::plot_ly(x = ~date, y = ~trend, type = "scatter", mode = "lines", line = list(color = color), name = "Trend", showlegend = FALSE) |>
+plotly::layout(yaxis = list(title = "Trend"))
+
+seasonal <- d |> plotly::plot_ly(x = ~date, y = ~season_year, type = "scatter", mode = "lines", line = list(color = color), name = "Seasonal", showlegend = FALSE) |>
+plotly::layout(yaxis = list(title = "Seasonal"))
+
+seasonal_adj <- d |> plotly::plot_ly(x = ~date, y = ~season_adjust, type = "scatter", mode = "lines", line = list(color = color), name = "Seasonal Adjusted", showlegend = FALSE) |>
+plotly::layout(yaxis = list(title = "Seasonal Adjusted"))
+
+
+irregular <- d |> plotly::plot_ly(x = ~date, y = ~remainder, 
+type = "scatter", mode = "lines", 
+line = list(color = color), name = "Irregular", showlegend = FALSE) |>
+plotly::layout(yaxis = list(title = "Irregular"))
+
+plotly::subplot(series, trend, seasonal, seasonal_adj, irregular, 
+nrows = 5, titleY = TRUE, shareX = TRUE) |>
+plotly::layout(xaxis = list(title = paste("Decomposition Method: ", dec_attr$method, sep = "")))
+```
+
+
+
+## The Irregular Component
+
+Unfortunately, most of us are not that lucky to get the "perfect" time series data that can be explained solely by its trend and seasonal components. In reality, some of the variation and patterns of time series are related to outliers, non-seasonal recurring events, structural breaks, and similar patterns. In this case, the irregular can help us reveal some patterns. Here is a useful trick I love adding to the decomposition plot - identify outliers in the irregular components and map them back to the series. 
+
+To do so, we will calculate the irregular component standard deviation and classify it between 2 and 3 SD and above:
+
+```{r}
+
+sdv <- sd(ts_stl_d$remainder)
+
+ts_stl_d <- ts_stl_d |>
+ dplyr::mutate(sd3 = ifelse(remainder >= 3 * sdv | remainder <= -3 * sdv, y, NA ),
+                sd2 = ifelse(remainder >= 2 * sdv & remainder < 3 * sdv |  remainder <= -2 * sdv &  remainder >  -3 * sdv, y, NA))
+ 
+ 
+table(!is.na(ts_stl_d$sd2))
+table(!is.na(ts_stl_d$sd3))  
+``` 
+
+
+ Let's now add it to the plot:
+
+```{r}
+#| fig-height: 10
+d <- ts_stl_d |>
+dplyr::mutate(date = as.Date(index))
+color <- "#0072B5"
+
+dec_attr <- attributes(ts_stl_d)
+ 
+series <- d |> plotly::plot_ly(x = ~date, y = ~y, type = "scatter", mode = "lines", line = list(color = color), name = "Actual", showlegend = FALSE) |>
+plotly::add_trace(x = ~ date, y = ~ sd2, marker = list(color = "orange")) |>
+plotly::add_trace(x = ~ date, y = ~ sd3, marker = list(color = "red")) |>
+plotly::layout(yaxis = list(title = "Actial"))
+
+trend <- d |> plotly::plot_ly(x = ~date, y = ~trend, type = "scatter", mode = "lines", line = list(color = color), name = "Trend", showlegend = FALSE) |>
+plotly::layout(yaxis = list(title = "Trend"))
+
+seasonal <- d |> plotly::plot_ly(x = ~date, y = ~season_year, type = "scatter", mode = "lines", line = list(color = color), name = "Seasonal", showlegend = FALSE) |>
+plotly::layout(yaxis = list(title = "Seasonal"))
+
+seasonal_adj <- d |> plotly::plot_ly(x = ~date, y = ~season_adjust, type = "scatter", mode = "lines", line = list(color = color), name = "Seasonal Adjusted", showlegend = FALSE) |>
+plotly::layout(yaxis = list(title = "Seasonal Adjusted"))
+
+
+irregular <- d |> plotly::plot_ly(x = ~date, y = ~remainder, 
+type = "scatter", mode = "lines", 
+line = list(color = color), name = "Irregular", showlegend = FALSE) |>
+plotly::add_segments(x = min(d$date), 
+xend = max(d$date), 
+y = 2 * sdv, 
+yend = 2 * sdv, 
+name = "2SD",
+line = list(color = "orange", dash = "dash")) |>
+plotly::add_segments(x = min(d$date), 
+xend = max(d$date), 
+y = - 2 * sdv, 
+yend = - 2 * sdv, 
+name = "-2SD",
+line = list(color = "orange", dash = "dash")) |>
+plotly::add_segments(x = min(d$date), 
+xend = max(d$date), 
+y = 3 * sdv, 
+yend = 3 * sdv, 
+name = "3SD",
+line = list(color = "red", dash = "dash")) |>
+plotly::add_segments(x = min(d$date), 
+xend = max(d$date), 
+y = -3 * sdv, 
+yend = -3 * sdv, 
+name = "-3SD",
+line = list(color = "red", dash = "dash")) |>
+plotly::layout(yaxis = list(title = "Irregular"))
+
+plotly::subplot(series, trend, seasonal, seasonal_adj, irregular, 
+nrows = 5, titleY = TRUE, shareX = TRUE) |>
+plotly::layout(xaxis = list(title = paste("Decomposition Method: ", dec_attr$method, sep = "")))
+
+```
+  
+
