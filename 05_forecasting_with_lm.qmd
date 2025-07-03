@@ -271,11 +271,316 @@ A great article about piecewise linear trends modeling can be found in the follo
 
 
 
+## Modeling Seasonal Time Series
+
+Let's now see how can we model a seasonal time series with linear regression.
+
+```{r}
+p <- plot_ly() |>
+add_lines(x = ts2$date, y = ts2$y, name = "Actual")
+
+p
+```
+
+
+Let's decompose the series:
+
+```{r}
+stl_d <- ts2 |> model( STL(y)) |> components()
+
+plot_decomposition(stl_d, var = "y", outliers = TRUE)
+```
+
+
+We will build the features step-by-step to review the impact of each feature on the goodness of fit. Let's start by defining the trend feature:
+
+```{r}
+ts2$trend <- 1:nrow(ts2)
+
+ts2
+```
+
+```{r}
+mds1  <- lm(y ~ trend, data = ts2)
+
+summary(mds1)
+```
+
+Let's fit the model and plot it:
+
+```{r}
+fit_s1 <- predict(object = mds1, newdata = ts2,  interval = "confidence", level = 0.95)
+ts2$fit1 <- fit_s1[, 1]
+p1 <- p |> 
+add_lines(x = ts2$date, y = ts2$fit1, mode = "lines", line = list(color = "black", dash = "dash"), name = "Fitted") 
+
+p1
+```
+
+
+::: {.callout-tip}
+## Detranding the Series
+
+If you check the model residuals, you will noticed that the residuals are detrained version of the original series.
+:::
+
+
+
+We will now add the seasonal feature by creating a categorical variable for each month of the year:
+
+```{r}
+ts2$month <- lubridate::month(ts2$index, label = TRUE)
+ts2
+```
+
+
+```{r}
+mds2  <- lm(y ~ trend + month, data = ts2)
+
+summary(mds2)
+```
+
+As you can  noticed from the model summary, adding the seasonal feature improved the model goodness of fit.
+
+
+```{r}
+fit_s2 <- predict(object = mds2, newdata = ts2,  interval = "confidence", level = 0.95)
+ts2$fit2 <- fit_s2[, 1]
+p2 <- p |> 
+add_lines(x = ts2$date, y = ts2$fit2, mode = "lines", line = list(color = "black", dash = "dash"), name = "Fitted") 
+
+p2
+```
+
+Let's review now the model residuals:
+
+```{r}
+ts2$res2 <- ts2$y - ts2$fit2
+
+
+plot_ly(x = ts2$date, y = ts2$res2, type = "scatter", mode = "markers")
+```
+
+
+And the ACF of the residuals:
+```{r}
+plot_acf(ts = ts2, var = "res2", lag_max = 60, frequency = NULL, alpha = 0.05)
+```
+
+
+
+The is a ton of information that left on the residuals!
+
+We will explore the following features:
+
+- Structural breaks
+- Piecewise Linear Trend
+- AR
+- Outliers
+
+### Structural Break Feature
+
+Often, time series would have an abrupt shift in its structure due to some event. A good example, is the Covid-19 pandemic impact on some macro-economic indicators such as the unemployment rate and number of passengers traveling on airplanes. At the end of this change, the series would be in a new level. 
+
+We can notice that the natural gas series had a structural break on the trend component around September 2018. To model a structural break, we will create a new variable that is equal to 0 prior to September 2018 and 1 after this date:
+
+```{r}
+ts2$structural_break <- ifelse(ts2$date >= as.Date("2018-09-01"), 1, 0)
+
+ts2 |> head()
+
+ts2 |> tail()
+```
 
 
 
 
+```{r}
+mds3  <- lm(y ~ trend + month + structural_break, data = ts2)
 
+summary(mds3)
+```
+
+As you can  noticed from the model summary, adding the seasonal feature improved the model goodness of fit.
+
+
+```{r}
+fit_s3 <- predict(object = mds3, newdata = ts2,  interval = "confidence", level = 0.95)
+ts2$fit3 <- fit_s3[, 1]
+p3 <- p |> 
+add_lines(x = ts2$date, y = ts2$fit3, mode = "lines", line = list(color = "black", dash = "dash"), name = "Fitted") 
+
+p3
+```
+
+
+let's plot the residuals:
+
+```{r}
+ts2$res3 <- ts2$y - ts2$fit3
+
+
+plot_ly(x = ts2$date, y = ts2$res3, type = "scatter", mode = "markers")
+```
+
+
+Let's generate a forecast for the next 5 years (60 months):
+
+
+```{r}
+h <- 60
+future_data <- new_data(ts2, n = h)
+future_data
+```
+We will have to build all the features we used so far: 
+
+```{r}
+trend_start <- max(ts2$trend) + 1
+trend_end <- trend_start + h - 1
+future_data$trend <- trend_start:trend_end
+future_data$month <- lubridate::month(future_data$index, label = TRUE)
+future_data$structural_break <- 1
+future_data$date <- as.Date(future_data$index)
+future_data
+```
+
+Now we can use the `predict` function to create the forecast:
+
+```{r}
+fcs1 <- predict(object = mds3, newdata = future_data, interval = "prediction", level = 0.95)
+
+future_data$yhat <- fcs1[,1]
+future_data$lower <- fcs1[,2]
+future_data$upper <- fcs1[,3]
+future_data
+```
+
+Let's plot the forecast
+```{r}
+p3 |> 
+add_ribbons(x = future_data$date, ymin = future_data$lower,
+ymax = future_data$upper, name = "95% Prediction Interval",
+ line = list(color = 'rgba(7, 164, 181, 0.05)'),
+              fillcolor = 'rgba(7, 164, 181, 0.2)') |>
+add_lines(x = future_data$date, 
+y = future_data$yhat, 
+name = "Forecast", 
+line = list(color = "black", dash = "dash"))
+```
+
+
+### Handling Outliers
+
+We can notices that the series has some years where the consumption is higher than normal years. We can segment two groups of outliers:
+
+- High: Jan 2025
+- Medium: Jan 2014, Jan 2018, Jan 2019, Jan 2022, Jan 2024
+
+Let's create the features:
+
+```{r}
+ts2$outlier_high <- ifelse(ts2$date == as.Date("2025-01-01"), 1, 0)
+outlier_medium_dates <-  c(as.Date("2014-01-01"), as.Date("2018-01-01"),as.Date("2019-01-01"), as.Date("2022-01-01"),as.Date("2024-01-01"))
+ts2$outlier_medium <- ifelse(ts2$date %in% outlier_medium_dates, 1, 0)
+
+table(ts2$outlier_high)
+table(ts2$outlier_medium)
+```
+
+Let's train the model with the new features:
+
+```{r}
+mds4  <- lm(y ~ trend + month + structural_break + outlier_high + outlier_medium, data = ts2)
+
+summary(mds4)
+```
+
+Let's refit the model and plot the residuals:
+
+```{r}
+fit_s4 <- predict(object = mds4, newdata = ts2,  interval = "confidence", level = 0.95)
+ts2$fit4 <- fit_s4[, 1]
+p4 <- p |> 
+add_lines(x = ts2$date, y = ts2$fit4, mode = "lines", line = list(color = "black", dash = "dash"), name = "Fitted") 
+
+p4
+```
+
+
+
+
+```{r}
+ts2$res4 <- ts2$y - ts2$fit4
+
+
+plot_ly(x = ts2$date, y = ts2$res4, type = "scatter", mode = "markers")
+```
+
+What else can be done?
+
+- Segment the residual with standard deviation
+- Add AR model to capture the correlation between residuals
+
+## Simulation
+
+Often, there are unexpected events that we won't know if and when they will occur in the future. We saw in the series that there are years that the consumption during the month of January is significantly higher. One approach to mitigate this risk is to use external information about future behavior such as weather prediction. Alternatively, we can set some assumption and about the probability of those events in the future and conduct simulation. 
+
+In the following example, we will illustrate the impact of training outlier and add its impact to the forecast. Let's first create a baseline forecast:
+
+```{r}
+future_data$outlier_high <- 0
+future_data$outlier_medium <- 0
+
+fcs2 <- predict(object = mds4, newdata = future_data, interval = "prediction", level = 0.95)
+
+future_data$yhat2 <- fcs2[,1]
+future_data$lower2 <- fcs2[,2]
+future_data$upper2 <- fcs2[,3]
+
+p4 |> 
+add_ribbons(x = future_data$date, ymin = future_data$lower2,
+ymax = future_data$upper2, name = "95% Prediction Interval",
+ line = list(color = 'rgba(7, 164, 181, 0.05)'),
+              fillcolor = 'rgba(7, 164, 181, 0.2)') |>
+add_lines(x = future_data$date, 
+y = future_data$yhat2, 
+name = "Forecast", 
+line = list(color = "black", dash = "dash"))
+
+```
+
+
+Now, let's assume that:
+- High consumption is expected in January 2029
+- Medium consumption is expected in January 2027
+
+Let's update the features on the future data set:
+
+```{r}
+future_data$outlier_high <-ifelse(future_data$date == "2029-01-01", 1, future_data$outlier_high)
+
+future_data$outlier_medium <-ifelse(future_data$date == "2027-01-01", 1, future_data$outlier_medium)
+
+```
+
+
+```{r}
+fcs3 <- predict(object = mds4, newdata = future_data, interval = "prediction", level = 0.95)
+
+future_data$yhat3 <- fcs3[,1]
+future_data$lower3 <- fcs3[,2]
+future_data$upper3 <- fcs3[,3]
+
+p4 |> 
+add_ribbons(x = future_data$date, ymin = future_data$lower2,
+ymax = future_data$upper2, name = "95% Prediction Interval",
+ line = list(color = 'rgba(7, 164, 181, 0.05)'),
+              fillcolor = 'rgba(7, 164, 181, 0.2)') |>
+add_lines(x = future_data$date, 
+y = future_data$yhat2, 
+name = "Forecast", 
+line = list(color = "black", dash = "dash"))
+```
 
 
 
