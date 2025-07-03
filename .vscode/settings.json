@@ -10,5 +10,13 @@
         "--no-restore",
         "--r-binary=/usr/local/bin/R"
     ],
-    "workbench.colorTheme": "Default High Contrast"
+    "workbench.colorTheme": "Default High Contrast",
+    "[r]": {
+    "editor.defaultFormatter": "REditorSupport.r",
+    "editor.formatOnSave": true
+},
+"[qmd]": {
+    "editor.defaultFormatter": "REditorSupport.r",
+    "editor.formatOnSave": true
+}
 }

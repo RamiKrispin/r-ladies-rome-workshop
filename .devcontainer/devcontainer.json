@@ -1,6 +1,6 @@
 {
     "name": "R Dev Environment",
-    "image": "docker.io/rkrispin/r-dev:arm64.0.0.1",
+    "image": "docker.io/rkrispin/r-ladies-rome-workshop:arm64.0.0.1",
     "customizations": {
         "vscode": {
             "extensions": [
@@ -38,6 +38,8 @@
                 "continue.continue"
             ]
         }
+    },
+           "remoteEnv": {
+        "EIA_API_KEY": "${localEnv:EIA_API_KEY}"
     }
-    // "postStartCommand": "until [ -f /root/.vscode-R/init.R ]; do sleep 0.1; done; radian"
 }
