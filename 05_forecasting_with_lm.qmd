@@ -177,7 +177,7 @@ fit2<- predict(object = md2, newdata = ts1,  interval = "confidence", level = 0.
 ts1$fit2 <- fit2[, 1]
 p2 <- p |> 
 add_lines(x = ts1$index, y = ts1$fit2, mode = "lines", line = list(color = "black", dash = "dash"), name = "Fitted") 
-
+p2
 ```
 
 We will add to the plot the features:
@@ -317,6 +317,11 @@ add_lines(x = ts2$date, y = ts2$fit1, mode = "lines", line = list(color = "black
 p1
 ```
 
+```{r}
+ts2$res1 <- ts2$y - ts2$fit1
+
+
+```
 
 ::: {.callout-tip}
 ## Detranding the Series
@@ -572,12 +577,12 @@ future_data$lower3 <- fcs3[,2]
 future_data$upper3 <- fcs3[,3]
 
 p4 |> 
-add_ribbons(x = future_data$date, ymin = future_data$lower2,
-ymax = future_data$upper2, name = "95% Prediction Interval",
+add_ribbons(x = future_data$date, ymin = future_data$lower3,
+ymax = future_data$upper3, name = "95% Prediction Interval",
  line = list(color = 'rgba(7, 164, 181, 0.05)'),
               fillcolor = 'rgba(7, 164, 181, 0.2)') |>
 add_lines(x = future_data$date, 
-y = future_data$yhat2, 
+y = future_data$yhat3, 
 name = "Forecast", 
 line = list(color = "black", dash = "dash"))
 ```
