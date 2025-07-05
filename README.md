@@ -27,3 +27,15 @@ All the workshop materials are available on the following notebooks:
 - [Correlation Analysis](https://ramikrispin.github.io/r-ladies-rome-workshop/03_correlation_analysis.html)
 - [Seasonality Analysis](https://ramikrispin.github.io/r-ladies-rome-workshop/04_seasonal_analysis.html)
 - [Forecasting with Linear Regression](https://ramikrispin.github.io/r-ladies-rome-workshop/05_forecasting_with_lm.html)
+
+
+## Resources
+
+- Forecasting: Principles and Practice, by Rob J Hyndman and George Athanasopoulos, [third edition](https://otexts.com/fpp3/)
+- The feasts library [documentation](https://github.com/tidyverts/feasts)
+- Piecewise Linear Trend [blog post](https://robjhyndman.com/hyndsight/piecewise-linear-trends/) by Rob J Hyndman 
+
+
+## License
+
+This tutorial is licensed under a [Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International](https://creativecommons.org/licenses/by-nc-sa/4.0/) License.
